@@ -23,7 +23,8 @@
     "bench": "tsx benchmarks/harness/run.ts",
     "test": "node --test --import tsx test/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "prepublishOnly": "npm run clean && npm run build && npm test"
+    "prepublishOnly": "npm run clean && npm run build && npm test",
+    "bench:real": "tsx benchmarks/real/run.ts"
   },
   "files": [
     "dist",
