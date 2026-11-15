@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { evaluateOpaque, simplifyOpaquePredicates } from "../src/anti-bla/opaque-predicates.js";
 import { sanitizeBody, scanJs } from "../src/anti-bla/sanitizer.js";
 import { detectContextBombs } from "../src/anti-bla/context-bomb.js";
+import { detectDecoyFamilies, structuralFingerprint } from "../src/anti-bla/decoy-family.js";
 import { runAntiBla } from "../src/anti-bla/engine.js";
 import { analyze } from "../src/core/analyze.js";
 import { ingest } from "../src/parsers/index.js";
@@ -108,6 +109,37 @@ test("context bombs: filler and packed blobs are quarantined, ordinary code is n
   assert.ok(res.quarantined.has("filler"));
   assert.ok(res.quarantined.has("packed"));
   assert.ok(!res.quarantined.has("normal"));
+});
+
+test("decoy-family: templated clones share a fingerprint; distinct logic does not", () => {
+  const a = "function f(state=0,budget=0){ if(budget<=0) return (state^0x2463)>>>0; return g(state+0x2463>>>0, budget-1); }";
+  const b = "function q(state=0,budget=0){ if(budget<=0) return (state^0x5d24)>>>0; return h(state+0x5d24>>>0, budget-1); }";
+  const real = "function loadInventory(){ if(!fs.existsSync(DB)) return []; return JSON.parse(fs.readFileSync(DB,'utf8')); }";
+  assert.equal(structuralFingerprint(a), structuralFingerprint(b)); // same template, different constants
+  assert.notEqual(structuralFingerprint(a), structuralFingerprint(real)); // genuinely different code
+});
+
+test("decoy-family: a large clone family is quarantined, real units are kept", () => {
+  const unit = (id: string, body: string): CodeUnit => ({ id, name: id, kind: "function", body, references: [], meta: {} });
+  const clones = Array.from({ length: 12 }, (_, i) =>
+    unit(`scc_${i}`, `function scc_${i}(state=0,budget=0){ if(budget<=0) return (state^${i * 7 + 3})>>>0; return scc_${(i + 1) % 12}(state+${i},budget-1); }`),
+  );
+  const real = unit("main", "function main(argv){ const items = load(); for (const a of argv) items.push(parse(a)); return save(items); }");
+  const res = detectDecoyFamilies([...clones, real], new Set());
+  assert.equal(res.quarantined.size, 12);
+  assert.ok(!res.quarantined.has("main"));
+  assert.ok(res.families.length === 1 && res.families[0]!.size === 12);
+});
+
+test("decoy-family: a clone family that is an entry point is not quarantined", () => {
+  const unit = (id: string, body: string): CodeUnit => ({ id, name: id, kind: "function", body, references: [], meta: {} });
+  const clones = Array.from({ length: 9 }, (_, i) =>
+    unit(`c${i}`, `function c${i}(state=0,budget=0){ if(budget<=0) return (state^${i * 11 + 5})>>>0; const s=(state^budget)&3; return c${(i + 1) % 9}(state+${i + 1}>>>0, budget-1); }`),
+  );
+  const entry = new Set(["c0"]);
+  const res = detectDecoyFamilies(clones, entry);
+  assert.ok(!res.quarantined.has("c0")); // entry point protected
+  assert.equal(res.quarantined.size, 8);
 });
 
 test("engine: predicate-guarded decoys are pruned after folding", async () => {

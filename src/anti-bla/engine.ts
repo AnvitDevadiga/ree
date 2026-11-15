@@ -15,25 +15,30 @@ import type { AntiBlaFinding, AntiBlaReport, ArtifactModel, CodeUnit, ContextSli
 import { estimateTokens } from "../core/tokens.js";
 import { analyzeReachability, keepReachable } from "./reachability.js";
 import { DEFAULT_THRESHOLDS, detectContextBombs, type BombThresholds } from "./context-bomb.js";
+import { DEFAULT_DECOY_THRESHOLDS, detectDecoyFamilies, type DecoyFamilyThresholds } from "./decoy-family.js";
 import { foldOpaquePredicates } from "./opaque-predicates.js";
 import { detectStringDecoder, sanitizeBody, sanitizeStrings } from "./sanitizer.js";
 
 export interface EngineOptions {
   foldPredicates?: boolean;
   prune?: boolean;
+  clusterDecoys?: boolean;
   quarantineBombs?: boolean;
   sanitize?: boolean;
   thresholds?: BombThresholds;
+  decoyThresholds?: DecoyFamilyThresholds;
 }
 
 export function runAntiBla(model: ArtifactModel, options: EngineOptions = {}): AntiBlaReport {
   const o = {
     foldPredicates: true,
     prune: true,
+    clusterDecoys: true,
     quarantineBombs: true,
     sanitize: true,
     ...options,
     thresholds: options.thresholds ?? DEFAULT_THRESHOLDS,
+    decoyThresholds: options.decoyThresholds ?? DEFAULT_DECOY_THRESHOLDS,
   };
   const findings: AntiBlaFinding[] = [];
   const unitsIn = model.units.length;
@@ -51,12 +56,22 @@ export function runAntiBla(model: ArtifactModel, options: EngineOptions = {}): A
     units = keepReachable(units, r.reachableIds);
   }
 
-  let quarantined = new Set<string>();
+  const quarantined = new Set<string>();
+  let decoyFamilyUnits = 0;
+  if (o.clusterDecoys) {
+    const entryIds = new Set(model.entryPoints.map((e) => e.unitId));
+    const d = detectDecoyFamilies(units, entryIds, o.decoyThresholds);
+    findings.push(...d.findings);
+    for (const id of d.quarantined) quarantined.add(id);
+    decoyFamilyUnits = d.quarantined.size;
+    units = units.filter((u) => !quarantined.has(u.id));
+  }
+
   if (o.quarantineBombs) {
     const b = detectContextBombs(units, o.thresholds);
     findings.push(...b.findings);
-    quarantined = b.quarantined;
-    units = units.filter((u) => !quarantined.has(u.id));
+    for (const id of b.quarantined) quarantined.add(id);
+    units = units.filter((u) => !b.quarantined.has(u.id));
   }
 
   let strings = model.strings;
@@ -97,6 +112,7 @@ export function runAntiBla(model: ArtifactModel, options: EngineOptions = {}): A
       unitsOut: units.length,
       unitsPruned,
       unitsQuarantined: quarantined.size,
+      decoyFamilyUnits,
       stringsSanitized,
       estTokensBefore,
       estTokensAfter: units.reduce((n, u) => n + unitTokens(u), 0),

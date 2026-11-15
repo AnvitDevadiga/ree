@@ -133,6 +133,8 @@ export interface AntiBlaReport {
     unitsOut: number;
     unitsPruned: number;
     unitsQuarantined: number;
+    /** Subset of unitsQuarantined that were removed as structural-clone decoy families. */
+    decoyFamilyUnits?: number;
     stringsSanitized: number;
     estTokensBefore: number;
     estTokensAfter: number;
