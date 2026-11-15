@@ -123,6 +123,14 @@ test("context bombs: filler and packed blobs are quarantined, ordinary code is n
   assert.ok(!res.quarantined.has("normal"));
 });
 
+test("limitations: analyze reports honest caveats per format", async () => {
+  const js = await analyze(writeTemp("lim.js", "function main(){ return 1; } main();"));
+  assert.ok(js.limitations.some((l) => /static-only/.test(l)), "always notes static-only");
+
+  const pyc = await analyze(fixture("inventory-cli", "clean").path); // any; checks shape
+  assert.ok(Array.isArray(pyc.limitations));
+});
+
 test("decoy-family: templated clones share a fingerprint; distinct logic does not", () => {
   const a = "function f(state=0,budget=0){ if(budget<=0) return (state^0x2463)>>>0; return g(state+0x2463>>>0, budget-1); }";
   const b = "function q(state=0,budget=0){ if(budget<=0) return (state^0x5d24)>>>0; return h(state+0x5d24>>>0, budget-1); }";

@@ -66,7 +66,7 @@ export interface StripArgs {
 }
 
 export async function reeStripDecoys(args: StripArgs) {
-  const { report } = await getAnalysis(args.path);
+  const { report, limitations } = await getAnalysis(args.path);
   const max = clamp(args.maxFindings ?? 100, 1, 1000);
   const bySeverity = countBy(report.findings, (f) => f.severity);
   const byPass = countBy(report.findings, (f) => f.pass);
@@ -80,6 +80,7 @@ export async function reeStripDecoys(args: StripArgs) {
     bySeverity,
     byPass,
     survivingEntryPoints: report.model.entryPoints,
+    limitations,
     untrustedArtifactData: {
       findings: report.findings.slice(0, max).map(findingSummary),
     },

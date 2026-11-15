@@ -8,6 +8,7 @@
  */
 import { ingest, type IngestOptions } from "../parsers/index.js";
 import { runAntiBla, toContextSlices, type EngineOptions } from "../anti-bla/engine.js";
+import { deriveLimitations } from "./limitations.js";
 import type { AntiBlaReport, ContextSlice } from "./types.js";
 
 export interface AnalyzeOptions extends IngestOptions {
@@ -18,11 +19,13 @@ export interface AnalyzeOptions extends IngestOptions {
 export interface AnalyzeResult {
   report: AntiBlaReport;
   slices: ContextSlice[];
+  /** Plain-language caveats: what REE could not establish about this artifact. */
+  limitations: string[];
 }
 
 export async function analyze(path: string, opts: AnalyzeOptions = {}): Promise<AnalyzeResult> {
   const model = await ingest(path, opts);
   const report = runAntiBla(model, opts.antiBla);
   const slices = toContextSlices(report.model, opts.tokenBudget ?? 60000);
-  return { report, slices };
+  return { report, slices, limitations: deriveLimitations(report) };
 }

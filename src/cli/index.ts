@@ -12,7 +12,7 @@ import { Command } from "commander";
 import { analyze } from "../core/analyze.js";
 import { reeReconstructAll, reeTraceEntrypoint } from "../mcp/tools.js";
 import { startStdioServer } from "../mcp/server.js";
-import { bold, cyan, dim, green, pct, severityColor, table } from "./format.js";
+import { bold, cyan, dim, green, pct, severityColor, table, yellow } from "./format.js";
 
 const program = new Command();
 
@@ -34,14 +34,14 @@ program
   .option("--no-verify", "with --reconstruct: skip the verification agent")
   .option("-o, --out <file>", "with --reconstruct: write results JSON to a file")
   .action(async (target: string, opts) => {
-    const { report, slices } = await analyze(target, {
+    const { report, slices, limitations } = await analyze(target, {
       antiBla: { prune: opts.prune },
       tokenBudget: Number(opts.budget),
     });
     const s = report.stats;
 
     if (opts.json && !opts.reconstruct) {
-      console.log(JSON.stringify({ stats: s, findings: report.findings, entryPoints: report.model.entryPoints, slices: slices.map(({ content, ...rest }) => rest) }, null, 2));
+      console.log(JSON.stringify({ stats: s, findings: report.findings, entryPoints: report.model.entryPoints, limitations, slices: slices.map(({ content, ...rest }) => rest) }, null, 2));
       return;
     }
 
@@ -72,6 +72,10 @@ program
           console.log(`  ${severityColor(f.severity)(f.severity.padEnd(10))} ${dim(f.pass.padEnd(18))} ${f.message}`);
         }
         if (report.findings.length > max) console.log(dim(`  … ${report.findings.length - max} more (use --findings or --json)`));
+      }
+      if (limitations.length) {
+        console.log(bold(`\nlimitations (what REE could not establish):`));
+        for (const l of limitations) console.log(yellow(`  • `) + l);
       }
     }
 
