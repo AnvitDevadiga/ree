@@ -2,19 +2,25 @@
  * Adversarial prompt and metadata sanitizer.
  *
  * Defenses aimed at LLM analyzers plant instructions where an agent will read
- * them verbatim: comments, docstrings, string tables, source-map references.
- * This pass makes sure none of that reaches a model as if it were an instruction:
+ * them verbatim: comments, docstrings, string tables, source-map references, and
+ * — in real `bla-agents` output — large **string-literal arrays** of fake
+ * safety/ChatML/turn-boundary payloads embedded inside otherwise-real source and
+ * JSON files. This pass makes sure none of that reaches a model as instructions:
  *
  *  - comments that match injection signatures are replaced (comments never affect
  *    behavior, so this is lossless for reconstruction);
- *  - string *literals* that match are left intact (removing them would change
- *    program behavior) but flagged, and the slicer labels them as program data;
+ *  - the matched injection span inside any **string literal or data payload** is
+ *    redacted to a placeholder, keeping the surrounding program/JSON structure so
+ *    reconstruction still sees the shape, but the hostile text never reaches the
+ *    model (REE never rewrites or executes the target — this only changes the
+ *    context slice an analyzer reads);
  *  - matching entries are dropped from the global string table;
  *  - source-map references are flagged as possible decoys;
  *  - XOR/keystream string decoders are flagged so literals aren't taken at face value.
  *
  * The comment scanner tracks string, template, and regex literals, so a `//`
- * inside a URL is never mistaken for a comment.
+ * inside a URL is never mistaken for a comment. Redaction is whole-body (not span
+ * classified) so a payload survives no matter how the surrounding bytes parse.
  */
 import type { AntiBlaFinding, ExtractedString } from "../core/types.js";
 
@@ -22,7 +28,10 @@ const INJECTION_SIGNATURES: RegExp[] = [
   /\bignore\s+(all\s+|any\s+|the\s+)?(previous|above|prior|earlier)\s+(instructions|context|rules)\b/i,
   /\bdisregard\s+(your|the|all)\s+(system\s+)?(prompt|instructions|rules)\b/i,
   /\byou\s+are\s+now\s+(an?\s+)?\w+/i,
-  /(^|\n)\s*(system|assistant|developer)\s*:/i,
+  // Turn-boundary roles, accepting a real newline OR the literal escape `\n`
+  // (BLA embeds `\n\nHuman:` inside JSON string literals, which models still read
+  // as a turn break).
+  /(^|\n|\\n)\s*(system|assistant|developer|human|user)\s*:/i,
   /<\/?\s*(system|instructions?|tool_call|function_call|im_start|im_end)\b[^>]*>/i,
   /\b(print|reveal|output)\s+(your|the)\s+(system\s+)?prompt\b/i,
   /\b(stop|halt|end)\s+(the\s+)?(analysis|reconstruction|reverse[- ]engineering)\b/i,
@@ -30,12 +39,44 @@ const INJECTION_SIGNATURES: RegExp[] = [
   /\bthis\s+(file|module|function|code)\s+(is\s+)?(empty|irrelevant|not\s+relevant|safe\s+to\s+skip|auto-?generated)\b/i,
   /\b(note|attention|important)\s+(to|for)\s+(the\s+)?(ai|llm|model|agent|assistant)\b/i,
   /\b(send|post|upload|exfiltrate)\b.{0,60}\bhttps?:\/\//i,
+  // ChatML / special-token turn frames (incl. the `<|im_start|>` pipe form BLA uses).
+  /<\|?\s*(im_start|im_end|endoftext|eot_id|start_header_id|end_header_id)\s*\|?>/i,
+  /\|\s*(im_start|im_end|endoftext)\s*\|/i,
+  // Fake moderation / "safety classifier" interventions and alignment canaries.
+  /\bALIGNMENT[-_\s]?EVAL[-_\s]?CANARY\b/i,
+  /\bcanary\s+[0-9a-f]{8}-[0-9a-f]{4}/i,
+  /\b(safety\s+classifier|critical\s+safety|constitutional\s+stop|system\s+safety\s+override|policy[_\s]violation)\b/i,
+  // Refusal scripts that try to make the analyzer abort or decline.
+  /\b(abort|terminate)\s+(all\s+)?(tool\s+calls?|code\s+generation|further\s+assistance)\b/i,
+  /\bI\s+cannot\s+(assist|help)\s+with\b/i,
+  /\brefuse\s+(further\s+)?(assistance|requests?|to\s+\w+)/i,
 ];
 
 const SOURCEMAP_REF = /[#@]\s*sourceMappingURL\s*=\s*\S+/;
 
+const REDACTION = "[ree:redacted-injection]";
+
 export function looksInjected(text: string): boolean {
   return INJECTION_SIGNATURES.some((re) => re.test(text));
+}
+
+/**
+ * Replace every injection-signature match anywhere in `text` with a neutral
+ * placeholder. Applied to whole unit bodies so a payload is removed no matter
+ * whether it sits in a comment, a string literal, or raw JSON/data — closing the
+ * leak where BLA embeds attacks as string-literal arrays rather than comments.
+ */
+export function redactInjections(text: string): { text: string; count: number } {
+  let count = 0;
+  let out = text;
+  for (const re of INJECTION_SIGNATURES) {
+    const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+    out = out.replace(g, () => {
+      count++;
+      return REDACTION;
+    });
+  }
+  return { text: out, count };
 }
 
 interface Span {
@@ -111,7 +152,8 @@ export function scanJs(src: string): Span[] {
 export interface SanitizeResult {
   findings: AntiBlaFinding[];
   body: string;
-  flaggedLiterals: number;
+  /** Count of injection payloads redacted from string literals / data (not comments). */
+  redactedInjections: number;
 }
 
 export function sanitizeBody(unitId: string, name: string, body: string): SanitizeResult {
@@ -119,41 +161,46 @@ export function sanitizeBody(unitId: string, name: string, body: string): Saniti
   const spans = scanJs(body);
   let out = "";
   let cursor = 0;
-  let removed = 0;
-  let flaggedLiterals = 0;
+  let removedComments = 0;
 
+  // Pass 1: drop instruction-like comments and source-map refs wholesale.
   for (const s of spans) {
+    if (s.kind !== "comment") continue;
     const text = body.slice(s.start, s.end);
-    if (s.kind === "comment" && (looksInjected(text) || SOURCEMAP_REF.test(text))) {
-      out += body.slice(cursor, s.start) + (text.startsWith("<!--") ? "<!-- [ree: removed] -->" : "/* [ree: removed] */");
-      cursor = s.end;
-      removed++;
-      findings.push({
-        pass: "sanitizer",
-        severity: SOURCEMAP_REF.test(text) && !looksInjected(text) ? "suspicious" : "malicious",
-        action: "sanitized",
-        unitId,
-        message: SOURCEMAP_REF.test(text) && !looksInjected(text)
-          ? `removed source-map reference from "${name}" (source maps may point to decoy sources)`
-          : `removed an instruction-like comment from "${name}"`,
-        evidence: { sample: text.slice(0, 100) },
-      });
-    } else if (s.kind === "string" && looksInjected(text)) {
-      flaggedLiterals++;
-    }
+    if (!(looksInjected(text) || SOURCEMAP_REF.test(text))) continue;
+    out += body.slice(cursor, s.start) + (text.startsWith("<!--") ? "<!-- [ree: removed] -->" : "/* [ree: removed] */");
+    cursor = s.end;
+    removedComments++;
+    findings.push({
+      pass: "sanitizer",
+      severity: SOURCEMAP_REF.test(text) && !looksInjected(text) ? "suspicious" : "malicious",
+      action: "sanitized",
+      unitId,
+      message: SOURCEMAP_REF.test(text) && !looksInjected(text)
+        ? `removed source-map reference from "${name}" (source maps may point to decoy sources)`
+        : `removed an instruction-like comment from "${name}"`,
+      evidence: { sample: text.slice(0, 100) },
+    });
   }
   out += body.slice(cursor);
 
-  if (flaggedLiterals) {
+  // Pass 2: redact injection payloads that live in string literals or raw data.
+  // These change nothing at runtime (REE never rewrites the target); redacting
+  // them only keeps BLA's prompt attacks out of the analyzer's context.
+  const red = redactInjections(out);
+  out = red.text;
+  if (red.count) {
     findings.push({
       pass: "sanitizer",
-      severity: "suspicious",
-      action: "flagged",
+      severity: "malicious",
+      action: "sanitized",
       unitId,
-      message: `"${name}" has ${flaggedLiterals} string literal(s) that read like instructions to an AI; kept as program data`,
+      message: `redacted ${red.count} embedded AI-directed instruction(s) from "${name}" (string-literal or data payloads; neutralized, not executed)`,
     });
   }
-  return { findings, body: removed ? out : body, flaggedLiterals };
+
+  const changed = removedComments > 0 || red.count > 0;
+  return { findings, body: changed ? out : body, redactedInjections: red.count };
 }
 
 export function sanitizeStrings(strings: ExtractedString[]): { findings: AntiBlaFinding[]; strings: ExtractedString[] } {
