@@ -10,9 +10,10 @@
 import { writeFile } from "node:fs/promises";
 import { Command } from "commander";
 import { analyze } from "../core/analyze.js";
+import { analyzeApp } from "../apps/dmg.js";
 import { reeReconstructAll, reeTraceEntrypoint } from "../mcp/tools.js";
 import { startStdioServer } from "../mcp/server.js";
-import { bold, cyan, dim, green, pct, severityColor, table, yellow } from "./format.js";
+import { bold, cyan, dim, green, pct, red, severityColor, table, yellow } from "./format.js";
 
 const program = new Command();
 
@@ -143,6 +144,62 @@ program
     for (const n of res.untrustedArtifactData.nodes) {
       console.log(`${"  ".repeat(n.depth)}${n.depth === 0 ? bold(n.name) : n.name} ${dim(`(${n.id})`)}`);
     }
+  });
+
+program
+  .command("app")
+  .description("analyze a macOS .dmg, a .app bundle, or an extracted app directory")
+  .argument("<target>", "path to a .dmg, .app, or directory")
+  .option("--budget <tokens>", "token budget per inner artifact", "60000")
+  .option("--max-artifacts <n>", "max inner artifacts to analyze", "12")
+  .option("--json", "emit machine-readable JSON")
+  .action(async (target: string, opts) => {
+    const analysis = await analyzeApp(target, {
+      tokenBudget: Number(opts.budget),
+      maxArtifacts: Number(opts.maxArtifacts),
+    });
+    if (opts.json) {
+      console.log(
+        JSON.stringify(
+          {
+            source: analysis.source,
+            kind: analysis.kind,
+            bundles: analysis.bundles,
+            warnings: analysis.warnings,
+            artifacts: analysis.artifacts.map((a) => ({
+              path: a.path,
+              role: a.role,
+              size: a.size,
+              error: a.error,
+              stats: a.result?.report.stats,
+              format: a.result?.report.model.format,
+              limitations: a.result?.limitations,
+            })),
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+    console.log(bold(`\nREE app analysis — ${target}`));
+    console.log(dim(`kind=${analysis.kind}${analysis.mounted ? `  mount=${analysis.mounted}` : ""}  bundles=${analysis.bundles.length || 1}`));
+    for (const w of analysis.warnings) console.log(yellow(`  ! ${w}`));
+    if (!analysis.artifacts.length) return;
+    console.log();
+    for (const a of analysis.artifacts) {
+      const rel = a.path.includes(".app/") ? a.path.slice(a.path.indexOf(".app/") + 5) : a.path;
+      if (a.error) {
+        console.log(`${red("✗")} ${a.roleLabel} ${dim(rel)} — ${a.error}`);
+        continue;
+      }
+      const s = a.result!.report.stats;
+      console.log(
+        `${green("✓")} ${bold(a.roleLabel)} ${dim(rel)}  ${a.result!.report.model.format}  ` +
+          `${green(`${pct(s.estTokensBefore, s.estTokensAfter)} reduction`)}  ${s.unitsOut}/${s.unitsIn} units, ${s.unitsQuarantined} quarantined`,
+      );
+    }
+    console.log(dim(`\nRun 'ree analyze <inner-path>' for a full report on any one artifact.`));
   });
 
 program

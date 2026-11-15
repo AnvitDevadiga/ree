@@ -312,6 +312,11 @@ export function writeAsar(files: Record<string, Buffer | string>): Buffer {
   return Buffer.concat([sizePickle, headerPickle, ...chunks]);
 }
 
+/** The Electron fixture's file map, for building synthetic .app bundles in tests. */
+export function electronAppFiles(hardened = false): Record<string, string | Buffer> {
+  return electronApp(hardened).files;
+}
+
 function electronApp(hardened: boolean): { files: Record<string, string | Buffer>; labels: Omit<Labels, "fixture" | "variant" | "format"> } {
   const files: Record<string, string | Buffer> = {
     "package.json": JSON.stringify({ name: "inventory-app", version: "1.0.0", main: "main.js" }),

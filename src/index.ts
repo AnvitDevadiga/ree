@@ -10,6 +10,16 @@ export { shannonEntropy, repetitionScore } from "./core/entropy.js";
 
 export { ingest, defaultParsers, type IngestOptions } from "./parsers/index.js";
 export { runAntiBla, toContextSlices, type EngineOptions } from "./anti-bla/index.js";
+export { deriveLimitations } from "./core/limitations.js";
+export {
+  analyzeApp,
+  withMountedDmg,
+  canMountDmg,
+  type AppAnalysis,
+  type AppArtifactResult,
+  type AppAnalyzeOptions,
+} from "./apps/dmg.js";
+export { collectAppArtifacts, findAppBundles, type BundleArtifact, type ArtifactRole } from "./apps/appbundle.js";
 export {
   ReconstructionPipeline,
   AnthropicClient,
