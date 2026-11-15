@@ -18,12 +18,13 @@ function makeAppBundle(): { dir: string; app: string } {
   return { dir, app };
 }
 
-test("appbundle: finds the Electron asar and the main Mach-O in a .app", () => {
+test("appbundle: finds the Electron asar and the main native executable in a .app", () => {
   const { app } = makeAppBundle();
   const arts = collectAppArtifacts(app);
   assert.ok(arts.some((a) => a.role === "electron-asar"), "finds app.asar");
   assert.equal(arts[0]!.role, "electron-asar", "asar is prioritized first");
-  if (existsSync("/bin/ls")) assert.ok(arts.some((a) => a.role === "main-executable"), "finds Mach-O main");
+  // /bin/ls is Mach-O on macOS and ELF on Linux; both count as the main executable.
+  if (existsSync("/bin/ls")) assert.ok(arts.some((a) => a.role === "main-executable"), "finds native main executable");
 });
 
 test("appbundle: findAppBundles lists .app directories at a root", () => {

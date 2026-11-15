@@ -29,15 +29,19 @@ export interface WalkLimits {
 
 export const DEFAULT_WALK_LIMITS: WalkLimits = { maxDepth: 12, maxEntries: 200_000, maxArtifacts: 64 };
 
+// Mach-O (incl. fat/universal) and ELF magic. A macOS app's main binary is
+// Mach-O, but a bundle built/extracted on Linux carries an ELF main executable,
+// so both count — and the parser handles either.
 const MACHO_MAGIC = new Set([0xfeedface, 0xfeedfacf, 0xcefaedfe, 0xcffaedfe, 0xcafebabe, 0xbebafeca]);
+const ELF_MAGIC = 0x7f454c46; // \x7fELF
 
-/** Cheap Mach-O check: read the 4-byte magic. */
-function isMachO(path: string): boolean {
+/** Cheap native-executable check: read the 4-byte magic (Mach-O or ELF). */
+function isNativeExecutable(path: string): boolean {
   try {
     const fd = readFileSync(path, { flag: "r" }).subarray(0, 4);
     if (fd.length < 4) return false;
-    const be = (fd[0]! << 24) | (fd[1]! << 16) | (fd[2]! << 8) | fd[3]!;
-    return MACHO_MAGIC.has(be >>> 0);
+    const be = ((fd[0]! << 24) | (fd[1]! << 16) | (fd[2]! << 8) | fd[3]!) >>> 0;
+    return MACHO_MAGIC.has(be) || be === ELF_MAGIC;
   } catch {
     return false;
   }
@@ -79,7 +83,7 @@ export function collectAppArtifacts(root: string, limits: WalkLimits = DEFAULT_W
         found.push({ path: full, role: name === "app.asar" ? "electron-asar" : "nested-asar", size: st.size });
       } else if (ext === ".dylib" || ext === ".so") {
         found.push({ path: full, role: "dylib", size: st.size });
-      } else if (ext === "" && st.size > 0 && isMachO(full)) {
+      } else if (ext === "" && st.size > 0 && isNativeExecutable(full)) {
         found.push({ path: full, role: "main-executable", size: st.size });
       }
     }
