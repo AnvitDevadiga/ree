@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" role="img" aria-label="REE — Reverse Engineer Everything">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020"/>
+      <stop offset="0.55" stop-color="#111a35"/>
+      <stop offset="1" stop-color="#1a1240"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.5" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#e879f9"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.2" cy="0.1" r="0.9">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="360" rx="18" fill="url(#bg)"/>
+  <rect width="1200" height="360" rx="18" fill="url(#grid)"/>
+  <rect width="1200" height="360" rx="18" fill="url(#glow)"/>
+
+  <!-- wordmark -->
+  <text x="72" y="150" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="104" font-weight="800" fill="url(#accent)" letter-spacing="6">REE</text>
+  <text x="76" y="196" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="600" fill="#e5e7eb">Reverse Engineer Everything</text>
+  <text x="76" y="236" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" fill="#9ca3af">Decoy-resistant, budget-safe reverse engineering for AI agents.</text>
+
+  <!-- chips -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#cbd5e1">
+    <rect x="76" y="270" width="108" height="34" rx="17" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="130" y="292" text-anchor="middle">.asar</text>
+    <rect x="196" y="270" width="118" height="34" rx="17" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="255" y="292" text-anchor="middle">JS bundle</text>
+    <rect x="326" y="270" width="96" height="34" rx="17" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="374" y="292" text-anchor="middle">.wasm</text>
+    <rect x="434" y="270" width="86" height="34" rx="17" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="477" y="292" text-anchor="middle">.pyc</text>
+    <rect x="532" y="270" width="170" height="34" rx="17" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="617" y="292" text-anchor="middle">ELF · Mach-O · PE</text>
+  </g>
+
+  <!-- pipeline motif -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">
+    <g>
+      <rect x="800" y="62" width="328" height="46" rx="10" fill="#f43f5e" fill-opacity="0.12" stroke="#f43f5e" stroke-opacity="0.55"/>
+      <text x="820" y="91" fill="#fda4af">hardened artifact</text>
+      <text x="1108" y="91" fill="#fda4af" text-anchor="end">300,845 tok</text>
+    </g>
+    <path d="M964 108v26" stroke="#64748b" stroke-width="2" stroke-dasharray="4 4"/>
+    <g>
+      <rect x="800" y="134" width="328" height="92" rx="10" fill="#818cf8" fill-opacity="0.10" stroke="#818cf8" stroke-opacity="0.55"/>
+      <text x="820" y="162" fill="#c7d2fe">fold · prune · cluster</text>
+      <text x="820" y="186" fill="#c7d2fe">quarantine · redact</text>
+      <text x="820" y="210" fill="#94a3b8" font-size="13">deterministic — no LLM, no execution</text>
+    </g>
+    <path d="M964 226v26" stroke="#64748b" stroke-width="2" stroke-dasharray="4 4"/>
+    <g>
+      <rect x="800" y="252" width="328" height="46" rx="10" fill="#22d3ee" fill-opacity="0.12" stroke="#22d3ee" stroke-opacity="0.6"/>
+      <text x="820" y="281" fill="#a5f3fc">clean context</text>
+      <text x="1108" y="281" fill="#a5f3fc" text-anchor="end">0 injections</text>
+    </g>
+  </g>
+</svg>
