@@ -1,0 +1,62 @@
+{
+  "name": "ree-reverse-engineer-everything",
+  "version": "0.1.0",
+  "description": "REE — a budget-safe, multi-format reverse-engineering framework with a deterministic de-obfuscation (anti-BLA) pre-pass and an MCP server for AI analysis agents.",
+  "type": "module",
+  "bin": {
+    "ree": "./dist/cli/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./parsers": "./dist/parsers/index.js",
+    "./anti-bla": "./dist/anti-bla/index.js",
+    "./mcp": "./dist/mcp/server.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -w -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "cli": "node --enable-source-maps dist/cli/index.js",
+    "mcp": "node --enable-source-maps dist/mcp/server.js",
+    "bench": "tsx benchmarks/harness/run.ts",
+    "test": "node --test --import tsx test/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "npm run clean && npm run build && npm test"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "reverse-engineering",
+    "decompiler",
+    "deobfuscation",
+    "static-analysis",
+    "mcp",
+    "model-context-protocol",
+    "wasm",
+    "asar",
+    "elf",
+    "security-research"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "acorn": "^8.14.0",
+    "acorn-walk": "^8.3.4",
+    "commander": "^12.1.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.env
+.ree-cache/
+coverage/
+*.tsbuildinfo
+benchmarks/fixtures/out/

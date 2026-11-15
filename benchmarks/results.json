@@ -1,0 +1,112 @@
+{
+  "rows": [
+    {
+      "fixture": "inventory-cli",
+      "variant": "clean",
+      "format": "js-bundle",
+      "naiveTokens": 563,
+      "reeTokens": 563,
+      "reductionPct": 0,
+      "realRecall": "9/9",
+      "decoyRemoval": "n/a",
+      "exhaustContained": "n/a",
+      "leaks": 0,
+      "findings": 0
+    },
+    {
+      "fixture": "inventory-cli",
+      "variant": "hardened",
+      "format": "js-bundle",
+      "naiveTokens": 12648,
+      "reeTokens": 730,
+      "reductionPct": 94.2,
+      "realRecall": "9/9",
+      "decoyRemoval": "12/12",
+      "exhaustContained": "2/2",
+      "leaks": 0,
+      "findings": 22
+    },
+    {
+      "fixture": "webpack-bundle",
+      "variant": "clean",
+      "format": "js-bundle",
+      "naiveTokens": 365,
+      "reeTokens": 264,
+      "reductionPct": 27.7,
+      "realRecall": "4/4",
+      "decoyRemoval": "n/a",
+      "exhaustContained": "n/a",
+      "leaks": 0,
+      "findings": 0
+    },
+    {
+      "fixture": "electron-app",
+      "variant": "clean",
+      "format": "asar",
+      "naiveTokens": 406,
+      "reeTokens": 406,
+      "reductionPct": 0,
+      "realRecall": "6/6",
+      "decoyRemoval": "n/a",
+      "exhaustContained": "n/a",
+      "leaks": 0,
+      "findings": 0
+    },
+    {
+      "fixture": "wasm-module",
+      "variant": "clean",
+      "format": "wasm",
+      "naiveTokens": 38,
+      "reeTokens": 38,
+      "reductionPct": 0,
+      "realRecall": "3/3",
+      "decoyRemoval": "n/a",
+      "exhaustContained": "n/a",
+      "leaks": 0,
+      "findings": 0
+    },
+    {
+      "fixture": "webpack-bundle",
+      "variant": "hardened",
+      "format": "js-bundle",
+      "naiveTokens": 994,
+      "reeTokens": 289,
+      "reductionPct": 70.9,
+      "realRecall": "4/4",
+      "decoyRemoval": "6/6",
+      "exhaustContained": "n/a",
+      "leaks": 0,
+      "findings": 8
+    },
+    {
+      "fixture": "electron-app",
+      "variant": "hardened",
+      "format": "asar",
+      "naiveTokens": 561,
+      "reeTokens": 414,
+      "reductionPct": 26.2,
+      "realRecall": "6/6",
+      "decoyRemoval": "3/3",
+      "exhaustContained": "n/a",
+      "leaks": 0,
+      "findings": 4
+    },
+    {
+      "fixture": "wasm-module",
+      "variant": "hardened",
+      "format": "wasm",
+      "naiveTokens": 1394,
+      "reeTokens": 38,
+      "reductionPct": 97.3,
+      "realRecall": "3/3",
+      "decoyRemoval": "3/3",
+      "exhaustContained": "n/a",
+      "leaks": 0,
+      "findings": 4
+    }
+  ],
+  "notes": [
+    "**pyc (structure only):** 8 code objects recovered from `tool.pyc` (Python 3.14+); 6 with parameter names. Pruning is disabled for pyc because REE does not yet recover a bytecode call graph.",
+    "**native (structure only):** `/bin/ls` parsed as macho: 1 function symbols, 90 imports, 289 strings. No call graph, so nothing is pruned."
+  ]
+}
