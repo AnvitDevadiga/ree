@@ -58,6 +58,26 @@ test("asar: files, package main, node_modules, and path-string references", asyn
   assert.equal(byName.get("assets/logo.png")!.body, undefined);
 });
 
+test("asar: Electron preload/renderer/html survive even when filename literals are gone", async () => {
+  // Simulate BLA de-literalizing the wiring: main.js references nothing by name.
+  const p = writeTemp(
+    "electron.asar",
+    writeAsar({
+      "package.json": JSON.stringify({ name: "app", main: "main.js", dependencies: { electron: "^30" } }),
+      "main.js": `const { app, BrowserWindow } = require("electron"); app.whenReady().then(() => { const w = new BrowserWindow({ webPreferences: { preload: resolveObf(0x1a) } }); w.loadFile(decodePath(7)); });`,
+      "preload.js": `const { contextBridge } = require("electron"); contextBridge.exposeInMainWorld("api", {});`,
+      "renderer.js": `document.getElementById("list").textContent = "ready";`,
+      "index.html": `<!doctype html><html><body><script src="renderer.js"></script></body></html>`,
+    }),
+  );
+  const { runAntiBla } = await import("../src/anti-bla/engine.js");
+  const report = runAntiBla(await ingest(p));
+  const kept = new Set(report.model.units.map((u) => u.name));
+  for (const f of ["main.js", "preload.js", "renderer.js", "index.html"]) {
+    assert.ok(kept.has(f), `Electron entry "${f}" must not be pruned`);
+  }
+});
+
 test("asar: oversized headers are refused, not decoded", async () => {
   const p = writeTemp("big.asar", writeAsar({ "index.js": "1", "pad.txt": "x".repeat(10) }));
   const m = await ingest(p, { limits: { maxHeaderBytes: 16 } });

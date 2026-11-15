@@ -133,7 +133,7 @@ export class AsarParser implements Parser {
       strings,
       entryPoints: findEntryPoints(units),
       warnings,
-      meta: { entryCount: units.length, maxDepth: maxDepthSeen, graphComplete: true },
+      meta: { entryCount: units.length, maxDepth: maxDepthSeen, graphComplete: true, electron: isElectronApp(units) },
     };
   }
 }
@@ -214,20 +214,61 @@ function resolveFile(p: string, byPath: Map<string, CodeUnit>): CodeUnit | undef
   return undefined;
 }
 
-function findEntryPoints(units: CodeUnit[]): EntryPoint[] {
+/** True when the archive looks like an Electron app (requires electron or depends on it). */
+function isElectronApp(units: CodeUnit[]): boolean {
   const byPath = new Map(units.map((u) => [u.name, u]));
   const pkg = byPath.get("package.json");
   if (pkg?.body) {
     try {
-      const main = (JSON.parse(pkg.body) as { main?: string }).main ?? "index.js";
-      const hit = resolveFile(joinPath("", main), byPath);
-      if (hit) return [{ unitId: hit.id, reason: "declared", detail: `package.json main: ${main}` }];
+      const j = JSON.parse(pkg.body) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
+      if (j.dependencies?.electron || j.devDependencies?.electron) return true;
     } catch {
-      /* fall through */
+      /* ignore */
     }
   }
-  const fallback = units.find((u) => /^(main|index)\.(js|cjs|mjs)$/.test(u.name));
-  return fallback ? [{ unitId: fallback.id, reason: "main", detail: fallback.name }] : [];
+  return units.some((u) => !!u.body && /require\(\s*["']electron["']\s*\)|from\s+["']electron["']/.test(u.body));
+}
+
+function findEntryPoints(units: CodeUnit[]): EntryPoint[] {
+  const byPath = new Map(units.map((u) => [u.name, u]));
+  const entries: EntryPoint[] = [];
+  const seen = new Set<string>();
+  const add = (u: CodeUnit | undefined, reason: EntryPoint["reason"], detail: string): void => {
+    if (u && !seen.has(u.id)) {
+      seen.add(u.id);
+      entries.push({ unitId: u.id, reason, detail });
+    }
+  };
+
+  // 1. Declared package main (the Node/Electron main process).
+  const pkg = byPath.get("package.json");
+  let main = "index.js";
+  if (pkg?.body) {
+    try {
+      main = (JSON.parse(pkg.body) as { main?: string }).main ?? "index.js";
+    } catch {
+      /* use default */
+    }
+  }
+  add(resolveFile(joinPath("", main), byPath), "declared", `package.json main: ${main}`);
+  if (entries.length === 0) {
+    add(units.find((u) => /^(main|index)\.(js|cjs|mjs)$/.test(u.name)), "main", "conventional main");
+  }
+
+  // 2. Electron wires preload/renderer/HTML through BrowserWindow config and
+  //    loadFile(), not require() — and real BLA output de-literalizes those
+  //    filenames, so the reference graph loses them. Treat Electron's
+  //    conventional entry files as roots so they are never pruned as "dead".
+  if (isElectronApp(units)) {
+    for (const u of units) {
+      const b = basename(u.name).toLowerCase();
+      if (/\.html?$/.test(b)) add(u, "electron", `loaded page: ${u.name}`);
+      else if (/(^|[-_.])preload[\w.-]*\.(c|m)?js$/.test(b)) add(u, "electron", `preload script: ${u.name}`);
+      else if (/(^|[-_.])renderer[\w.-]*\.(c|m)?js$/.test(b)) add(u, "electron", `renderer script: ${u.name}`);
+    }
+  }
+
+  return entries;
 }
 
 // ---------------------------------------------------------------------------

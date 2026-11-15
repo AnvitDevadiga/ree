@@ -49,7 +49,7 @@ export interface ExtractedString {
 /** A declared or inferred entry point — the roots for reachability analysis. */
 export interface EntryPoint {
   unitId: string;
-  reason: "main" | "export" | "ipc-handler" | "start-section" | "declared" | "heuristic";
+  reason: "main" | "export" | "ipc-handler" | "start-section" | "declared" | "heuristic" | "electron";
   detail?: string;
 }
 
