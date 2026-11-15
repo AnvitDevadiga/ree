@@ -3,6 +3,14 @@
 All notable changes to REE are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] — 2026-11-15
+
+### Fixed
+
+- `ree app` / the bundle walker now detects **ELF** main executables, not only
+  Mach-O, so bundles built or extracted on Linux (and CI runners) are analyzed
+  correctly. Fixes a test failure on Linux.
+
 ## [1.0.0] — 2026-11-15
 
 First stable release. REE now neutralizes **real** `bla-agents` output, not just a
