@@ -1,6 +1,6 @@
 {
   "name": "ree-reverse-engineer-everything",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "REE — a budget-safe, multi-format reverse-engineering framework with a deterministic de-obfuscation (anti-BLA) pre-pass and an MCP server for AI analysis agents.",
   "type": "module",
   "bin": {
