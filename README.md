@@ -6,6 +6,7 @@
 
 REE puts a deterministic static-analysis pass in front of the LLM. Decoys, context bombs, and planted instructions are removed *before* a model reads a single token, so hardened builds can't poison, exhaust, or mislead your analysis agent.
 
+[![CI](https://github.com/AnvitDevadiga/ree/actions/workflows/ci.yml/badge.svg)](https://github.com/AnvitDevadiga/ree/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-339933)
 ![Tests](https://img.shields.io/badge/tests-48%20passing-brightgreen)

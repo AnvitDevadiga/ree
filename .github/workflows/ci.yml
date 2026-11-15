@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: test & typecheck (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22.23.4", "24"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  real-adversary:
+    name: injection-leak gate vs. real bla-agents
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      # bench:real installs the published bla-agents, hardens REE's fixtures at
+      # bankrupt/llm-directives, and exits non-zero if any injection marker leaks.
+      # It self-skips (exit 0) only if bla-agents cannot be obtained.
+      - run: npm run bench:real
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-adversary-results
+          path: benchmarks/real/RESULTS.md
+          if-no-files-found: ignore
