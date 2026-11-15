@@ -58,6 +58,15 @@ const IDENTITIES: Identity[] = [
     re: /^(\w+)\*\1(?<op>>=)0$/,
     value: () => true,
   },
+  {
+    // BLA MBA variant: ((X | Y) >>> 0) vs ((X ^ Y) >>> 0). For ANY operands,
+    // X^Y is a submask of X|Y, so (X|Y) >= (X^Y) always and (X|Y) < (X^Y) never.
+    // Matching the shape is sound regardless of what X and Y are, so this can
+    // only miss cases, never fold wrongly.
+    name: "bitmask-or-dominates-xor",
+    re: /^\(\((.+)\|(.+)\)>>>0\)(?<op><|>=)\(\(\1\^\2\)>>>0\)$/,
+    value: (op) => op === ">=",
+  },
 ];
 
 function stripParens(text: string): string {

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { evaluateOpaque, simplifyOpaquePredicates } from "../src/anti-bla/opaque-predicates.js";
 import { sanitizeBody, scanJs } from "../src/anti-bla/sanitizer.js";
-import { detectContextBombs } from "../src/anti-bla/context-bomb.js";
+import { detectContextBombs, elideBombLiterals } from "../src/anti-bla/context-bomb.js";
 import { detectDecoyFamilies, structuralFingerprint } from "../src/anti-bla/decoy-family.js";
 import { runAntiBla } from "../src/anti-bla/engine.js";
 import { analyze } from "../src/core/analyze.js";
@@ -17,6 +17,18 @@ test("opaque: the mod-7 quadratic-residue predicate is constant for every intege
   assert.deepEqual(evaluateOpaque("(7 * a * a - 1) % 7 === (b * b) % 7"), { name: "bla-quadratic-residue-mod7", value: false });
   assert.deepEqual(evaluateOpaque("((b*b)%7 !== (7*a*a-1)%7)"), { name: "bla-quadratic-residue-mod7", value: true });
   assert.equal(evaluateOpaque("x * (x + 1) % 2 === 0")?.value, true);
+});
+
+test("opaque: the bitmask OR-dominates-XOR identity folds (sound for any operands)", () => {
+  const u = "(((k ^ 3076267950) >>> 0))";
+  const u1 = `(((${u} - 1) >>> 0))`;
+  assert.equal(evaluateOpaque(`(((${u} | ${u1}) >>> 0) >= ((${u} ^ ${u1}) >>> 0))`)?.value, true);
+  assert.equal(evaluateOpaque(`(((${u} | ${u1}) >>> 0) < ((${u} ^ ${u1}) >>> 0))`)?.value, false);
+  // Submask fact holds for any X,Y empirically.
+  for (let t = 0; t < 5000; t++) {
+    const x = (Math.random() * 2 ** 32) >>> 0, y = (Math.random() * 2 ** 32) >>> 0;
+    assert.ok(((x | y) >>> 0) >= ((x ^ y) >>> 0));
+  }
 });
 
 test("opaque: unsound look-alikes are not treated as constant", () => {
@@ -140,6 +152,25 @@ test("decoy-family: a clone family that is an entry point is not quarantined", (
   const res = detectDecoyFamilies(clones, entry);
   assert.ok(!res.quarantined.has("c0")); // entry point protected
   assert.equal(res.quarantined.size, 8);
+});
+
+test("context bombs: a big packed literal inside real code is elided, code is kept", () => {
+  let seed = 11;
+  const rand = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32);
+  const b64 = Buffer.from(Array.from({ length: 4000 }, () => Math.floor(rand() * 256))).toString("base64");
+  const body = `function real(x) {\n  const BLOB = "${b64}";\n  return x * 2 + BLOB.length;\n}`;
+  const res = elideBombLiterals("u", "real", body);
+  assert.equal(res.elided, 1);
+  assert.doesNotMatch(res.body, new RegExp(b64.slice(0, 40)));
+  assert.match(res.body, /bytes of embedded data elided/);
+  assert.match(res.body, /return x \* 2 \+ BLOB\.length/); // real logic preserved
+});
+
+test("context bombs: a long single-character run is elided as filler", () => {
+  const body = `const PAD = "${"A".repeat(3000)}"; function f(){ return 1; }`;
+  const res = elideBombLiterals("u", "f", body);
+  assert.equal(res.elided, 1);
+  assert.match(res.body, /function f\(\)\{ return 1; \}/);
 });
 
 test("engine: predicate-guarded decoys are pruned after folding", async () => {

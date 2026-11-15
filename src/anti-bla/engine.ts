@@ -14,7 +14,7 @@
 import type { AntiBlaFinding, AntiBlaReport, ArtifactModel, CodeUnit, ContextSlice } from "../core/types.js";
 import { estimateTokens } from "../core/tokens.js";
 import { analyzeReachability, keepReachable } from "./reachability.js";
-import { DEFAULT_THRESHOLDS, detectContextBombs, type BombThresholds } from "./context-bomb.js";
+import { DEFAULT_THRESHOLDS, detectContextBombs, elideBombLiterals, type BombThresholds } from "./context-bomb.js";
 import { DEFAULT_DECOY_THRESHOLDS, detectDecoyFamilies, type DecoyFamilyThresholds } from "./decoy-family.js";
 import { foldOpaquePredicates } from "./opaque-predicates.js";
 import { detectStringDecoder, sanitizeBody, sanitizeStrings } from "./sanitizer.js";
@@ -85,6 +85,12 @@ export function runAntiBla(model: ArtifactModel, options: EngineOptions = {}): A
       stringsSanitized += res.findings.filter((f) => f.action === "sanitized").length;
       u.body = res.body;
       if (res.redactedInjections) u.meta.injectionRedactions = res.redactedInjections;
+      if (o.quarantineBombs) {
+        const el = elideBombLiterals(u.id, u.name, u.body, o.thresholds);
+        findings.push(...el.findings);
+        stringsSanitized += el.elided;
+        u.body = el.body;
+      }
     }
     const s = sanitizeStrings(model.strings);
     findings.push(...s.findings);

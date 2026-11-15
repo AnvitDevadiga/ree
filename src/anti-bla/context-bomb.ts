@@ -15,6 +15,7 @@
 import type { AntiBlaFinding, CodeUnit } from "../core/types.js";
 import { repetitionScore, shannonEntropy } from "../core/entropy.js";
 import { estimateTokens } from "../core/tokens.js";
+import { scanJs } from "./sanitizer.js";
 
 export interface BombThresholds {
   /** Bits per character above which text looks packed or encrypted. */
@@ -86,4 +87,56 @@ export function detectContextBombs(units: CodeUnit[], t: BombThresholds = DEFAUL
 
 function round(n: number): number {
   return Math.round(n * 1000) / 1000;
+}
+
+/**
+ * Elide large packed/encoded string literals embedded *inside* an otherwise-real
+ * unit (e.g. a kept function whose body hides a 100 KB base64 context bomb). The
+ * whole-unit entropy check misses these because the surrounding real code
+ * dilutes the average. Each oversized high-entropy or highly-repetitive literal
+ * is replaced by a size note, preserving the unit's structure for reconstruction
+ * while keeping the blob out of the model's context.
+ */
+export function elideBombLiterals(
+  unitId: string,
+  name: string,
+  body: string,
+  t: BombThresholds = DEFAULT_THRESHOLDS,
+): { body: string; findings: AntiBlaFinding[]; elided: number } {
+  const findings: AntiBlaFinding[] = [];
+  const minLiteralChars = 400;
+  const spans = scanJs(body).filter((s) => s.kind === "string" && s.end - s.start >= minLiteralChars);
+  if (spans.length === 0) return { body, findings, elided: 0 };
+
+  let out = "";
+  let cursor = 0;
+  let elided = 0;
+  for (const s of spans) {
+    const raw = body.slice(s.start, s.end);
+    const quote = raw[0]!;
+    const inner = raw.slice(1, -1);
+    const entropy = shannonEntropy(inner);
+    const repetition = repetitionScore(inner);
+    const packed = entropy >= t.highEntropy;
+    const filler = repetition >= t.highRepetition;
+    // A long near-single-character run (e.g. "AAAA…") is low-entropy filler the
+    // ratio check can miss; catch it explicitly.
+    const runaway = /(.)\1{200,}/.test(inner);
+    if (!packed && !filler && !runaway) continue;
+    out += body.slice(cursor, s.start);
+    const why = packed ? `${entropy.toFixed(2)} bits/char, packed` : "repetitive filler";
+    out += `${quote}[ree: ${inner.length} bytes of embedded data elided — ${why}]${quote}`;
+    cursor = s.end;
+    elided++;
+    findings.push({
+      pass: "context-bomb",
+      severity: "suspicious",
+      action: "sanitized",
+      unitId,
+      message: `elided a ${inner.length}-byte embedded data literal from "${name}" (${why}); kept out of LLM context`,
+      evidence: { bytes: inner.length, entropy: round(entropy), repetition: round(repetition) },
+    });
+  }
+  out += body.slice(cursor);
+  return { body: elided ? out : body, findings, elided };
 }
