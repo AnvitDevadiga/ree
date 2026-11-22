@@ -3,3 +3,14 @@ export { TriageAgent, deterministicPlan, type TriagePlan } from "./triage.js";
 export { SynthesisAgent, type ReconstructedUnit } from "./synthesis.js";
 export { VerificationAgent, type Verdict } from "./verification.js";
 export { ReconstructionPipeline, type PipelineOptions, type ReconstructionResult } from "./pipeline.js";
+export {
+  OpenAICompatClient,
+  BudgetedClient,
+  resolveProvider,
+  SpendCapError,
+  ProviderConfigError,
+  type ProviderKind,
+  type ResolvedProvider,
+  type Pricing,
+  type SpendLedger,
+} from "./providers.js";

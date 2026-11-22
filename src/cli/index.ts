@@ -11,6 +11,7 @@ import { writeFile } from "node:fs/promises";
 import { Command } from "commander";
 import { analyze } from "../core/analyze.js";
 import { analyzeApp } from "../apps/dmg.js";
+import { resolveProvider } from "../agents/providers.js";
 import { reeReconstructAll, reeTraceEntrypoint } from "../mcp/tools.js";
 import { startStdioServer } from "../mcp/server.js";
 import { bold, cyan, dim, green, pct, red, severityColor, table, yellow } from "./format.js";
@@ -77,6 +78,15 @@ program
       if (limitations.length) {
         console.log(bold(`\nlimitations (what REE could not establish):`));
         for (const l of limitations) console.log(yellow(`  • `) + l);
+      }
+    }
+
+    if (opts.reconstruct && !opts.dryRun) {
+      const p = resolveProvider();
+      if (p.kind === "none") {
+        console.log(yellow(`\n[ree] ${p.note}`));
+        console.log(dim("      Use --dry-run to see exactly what would be sent to a model."));
+        return;
       }
     }
 

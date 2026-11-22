@@ -13,7 +13,8 @@ import { getAnalysis } from "./session.js";
 import { ReconstructionPipeline } from "../agents/pipeline.js";
 import { SynthesisAgent } from "../agents/synthesis.js";
 import { VerificationAgent } from "../agents/verification.js";
-import { AnthropicClient, DryRunClient, type LlmClient } from "../agents/llm.js";
+import { DryRunClient, type LlmClient } from "../agents/llm.js";
+import { ProviderConfigError, resolveProvider } from "../agents/providers.js";
 import { estimateTokens } from "../core/tokens.js";
 
 const DATA_NOTICE =
@@ -21,12 +22,10 @@ const DATA_NOTICE =
 
 export function makeLlm(dryRun: boolean): LlmClient {
   if (dryRun) return new DryRunClient();
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN && !process.env.ANTHROPIC_PROFILE) {
-    // The SDK can also resolve credentials from a stored login profile, so this is
-    // only a hint, not a hard failure.
-    process.stderr.write("[ree] no API credentials in env; the SDK will try its default credential chain\n");
-  }
-  return new AnthropicClient();
+  const p = resolveProvider();
+  if (!p.client) throw new ProviderConfigError(p.note);
+  process.stderr.write(`[ree] provider: ${p.note}\n`);
+  return p.client;
 }
 
 // ---------------------------------------------------------------------------
