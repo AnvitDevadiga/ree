@@ -28,6 +28,14 @@ export class ProviderConfigError extends Error {}
 /** The provider kept returning 429 after all retries — an availability failure, not a quality one. */
 export class RateLimitError extends Error {}
 
+/** Parse an OpenAI/Groq-style duration such as "600ms", "7.66s" or "1m2.5s" into ms. */
+export function parseDurationMs(v: string | null | undefined): number | undefined {
+  if (!v) return undefined;
+  const m = /^(?:(\d+)h)?(?:(\d+)m(?!s))?(?:([\d.]+)s)?(?:([\d.]+)ms)?$/.exec(v.trim());
+  if (!m || !(m[1] || m[2] || m[3] || m[4])) return undefined;
+  return Number(m[1] ?? 0) * 3_600_000 + Number(m[2] ?? 0) * 60_000 + Number(m[3] ?? 0) * 1000 + Number(m[4] ?? 0);
+}
+
 /** Parse Retry-After (seconds or HTTP date) or Groq-style "try again in 1m2.5s" hints. */
 export function retryDelayMs(retryAfter: string | null, body: string, attempt: number): number {
   if (retryAfter) {
@@ -56,11 +64,20 @@ export interface OpenAICompatOptions {
   maxRetries?: number;
   /** Injected for tests. */
   sleep?: (ms: number) => Promise<void>;
+  /**
+   * Tokens to budget for a response when pacing against the provider's
+   * tokens-per-minute limit. Default 4096.
+   */
+  expectedOutputTokens?: number;
 }
 
 export class OpenAICompatClient implements LlmClient {
   /** Count of 429/503 responses seen, so callers can report rate limiting separately. */
   rateLimitHits = 0;
+  /** Milliseconds spent waiting proactively for the token window to refill. */
+  pacedMs = 0;
+  /** Last rate-limit state reported by the provider's x-ratelimit-* headers. */
+  private window?: { remainingTokens: number; resetMs: number; at: number };
 
   constructor(private readonly o: OpenAICompatOptions) {}
 
@@ -68,6 +85,7 @@ export class OpenAICompatClient implements LlmClient {
     const max = this.o.maxRetries ?? 6;
     const sleep = this.o.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
     for (let attempt = 0; ; attempt++) {
+      await this.pace(req, sleep);
       try {
         return await this.once(req);
       } catch (e) {
@@ -76,6 +94,31 @@ export class OpenAICompatClient implements LlmClient {
         if (attempt >= max) throw new RateLimitError(`rate limited after ${max} retries: HTTP ${e.status}`);
         await sleep(e.delayMs);
       }
+    }
+  }
+
+  /**
+   * Wait before sending if the provider said its token window can't cover this
+   * call. Uses the x-ratelimit-remaining-tokens / x-ratelimit-reset-tokens
+   * headers OpenAI-compatible servers (Groq, OpenAI, vLLM) return, so a small
+   * tokens-per-minute tier is respected instead of hammered with retries.
+   */
+  private async pace(req: LlmRequest, sleep: (ms: number) => Promise<void>): Promise<void> {
+    const w = this.window;
+    if (!w) return;
+    const need = estimateTokens(req.system + req.prompt) + Math.min(req.maxTokens ?? 8192, this.o.expectedOutputTokens ?? 4096);
+    if (w.remainingTokens >= need) return;
+    const wait = Math.min(60_000, Math.max(0, w.resetMs - (Date.now() - w.at)) + 250);
+    if (wait <= 250) return;
+    this.pacedMs += wait;
+    await sleep(wait);
+  }
+
+  private recordWindow(h: Headers): void {
+    const remaining = Number(h.get("x-ratelimit-remaining-tokens"));
+    const reset = parseDurationMs(h.get("x-ratelimit-reset-tokens"));
+    if (Number.isFinite(remaining) && h.get("x-ratelimit-remaining-tokens") !== null && reset !== undefined) {
+      this.window = { remainingTokens: remaining, resetMs: reset, at: Date.now() };
     }
   }
 
@@ -102,6 +145,7 @@ export class OpenAICompatClient implements LlmClient {
           ],
         }),
       });
+      this.recordWindow(res.headers);
       if (res.status === 429 || res.status === 503) {
         const body = await res.text();
         throw new RetryableHttp(res.status, retryDelayMs(res.headers.get("retry-after"), body, 0));

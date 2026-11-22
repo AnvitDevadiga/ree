@@ -263,11 +263,12 @@ async function main(): Promise<void> {
     const t0 = Date.now();
     const spentBefore = budget?.ledger.usd ?? 0;
     const hitsBefore = transport?.rateLimitHits ?? 0;
+    const pacedBefore = transport?.pacedMs ?? 0;
     const meter = new Meter(base);
     const row: Row = {
       fixture: fx.name, source: fx.source, license: fx.license, format: fx.format, build: fx.build,
       slices: 0, reconstructed: 0, verifierAccepted: 0, nameRecall: "-", namesFound: [], behavior: "-",
-      behaviorDetail: {}, calls: 0, inputTokens: 0, outputTokens: 0, usd: null, seconds: 0, rateLimitHits: 0,
+      behaviorDetail: {}, calls: 0, inputTokens: 0, outputTokens: 0, usd: null, seconds: 0, rateLimitHits: 0, pacedSeconds: 0,
     };
     try {
       const artifact = fx.make();
@@ -323,10 +324,11 @@ async function main(): Promise<void> {
     row.usd = budget ? +(budget.ledger.usd - spentBefore).toFixed(4) : dry ? null : 0;
     row.seconds = Math.round((Date.now() - t0) / 100) / 10;
     row.rateLimitHits = (transport?.rateLimitHits ?? 0) - hitsBefore;
+    row.pacedSeconds = Math.round(((transport?.pacedMs ?? 0) - pacedBefore) / 100) / 10;
     rows.push(row);
     console.log(
       `${fx.name.padEnd(34)} slices=${row.slices} recon=${row.reconstructed} names=${row.nameRecall} behavior=${row.behavior} ` +
-        `tokens=${row.inputTokens}/${row.outputTokens} usd=${row.usd ?? "-"} 429s=${row.rateLimitHits}${row.error ? `  ERROR: ${row.error}` : ""}`,
+        `tokens=${row.inputTokens}/${row.outputTokens} usd=${row.usd ?? "-"} 429s=${row.rateLimitHits} paced=${row.pacedSeconds}s${row.error ? `  ERROR: ${row.error}` : ""}`,
     );
     if (row.error?.startsWith("spend cap")) break;
   }

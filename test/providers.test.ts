@@ -145,3 +145,41 @@ test("OpenAICompatClient: persistent 429 surfaces as RateLimitError, not a quali
     srv.close();
   }
 });
+
+test("parseDurationMs: Groq/OpenAI reset formats", async () => {
+  const { parseDurationMs } = await import("../src/agents/providers.js");
+  assert.equal(parseDurationMs("600ms"), 600);
+  assert.equal(parseDurationMs("7.66s"), 7660);
+  assert.equal(parseDurationMs("1m2.5s"), 62500);
+  assert.equal(parseDurationMs("1h4m48s"), 3888000);
+  assert.equal(parseDurationMs("garbage"), undefined);
+});
+
+test("OpenAICompatClient: paces itself from x-ratelimit headers instead of hitting 429", async () => {
+  const { createServer: cs } = await import("node:http");
+  let calls = 0;
+  const srv = cs((req, res) => {
+    req.resume();
+    req.on("end", () => {
+      calls++;
+      res.setHeader("content-type", "application/json");
+      res.setHeader("x-ratelimit-remaining-tokens", "500"); // window nearly empty
+      res.setHeader("x-ratelimit-reset-tokens", "7.5s");
+      res.end(JSON.stringify({ choices: [{ message: { content: "ok" } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }));
+    });
+  });
+  await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+  const waits: number[] = [];
+  try {
+    const port = (srv.address() as AddressInfo).port;
+    const c = new OpenAICompatClient({ baseUrl: `http://127.0.0.1:${port}/v1`, models: { workhorse: "m", deep: "m" }, sleep: async (ms) => void waits.push(ms) });
+    await c.complete({ system: "s", prompt: "p" }); // first call: no window known yet
+    await c.complete({ system: "s", prompt: "p" }); // second: must wait for reset first
+    assert.equal(calls, 2);
+    assert.equal(c.rateLimitHits, 0, "paced, never rate-limited");
+    assert.equal(waits.length, 1);
+    assert.ok(waits[0]! > 7000 && waits[0]! <= 7750, `waited ${waits[0]}`);
+  } finally {
+    srv.close();
+  }
+});
