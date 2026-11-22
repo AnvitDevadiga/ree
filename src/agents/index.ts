@@ -9,6 +9,8 @@ export {
   resolveProvider,
   SpendCapError,
   ProviderConfigError,
+  RateLimitError,
+  retryDelayMs,
   type ProviderKind,
   type ResolvedProvider,
   type Pricing,

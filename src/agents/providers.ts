@@ -25,6 +25,24 @@ export type ProviderKind = "anthropic" | "openai-compatible" | "none";
 
 export class SpendCapError extends Error {}
 export class ProviderConfigError extends Error {}
+/** The provider kept returning 429 after all retries — an availability failure, not a quality one. */
+export class RateLimitError extends Error {}
+
+/** Parse Retry-After (seconds or HTTP date) or Groq-style "try again in 1m2.5s" hints. */
+export function retryDelayMs(retryAfter: string | null, body: string, attempt: number): number {
+  if (retryAfter) {
+    const s = Number(retryAfter);
+    if (Number.isFinite(s)) return Math.min(120_000, Math.max(250, s * 1000));
+    const t = Date.parse(retryAfter);
+    if (Number.isFinite(t)) return Math.min(120_000, Math.max(250, t - Date.now()));
+  }
+  const m = /try again in\s+(?:(\d+)m)?(?:([\d.]+)s)?(?:([\d.]+)ms)?/i.exec(body);
+  if (m && (m[1] || m[2] || m[3])) {
+    const ms = Number(m[1] ?? 0) * 60_000 + Number(m[2] ?? 0) * 1000 + Number(m[3] ?? 0);
+    return Math.min(120_000, Math.max(250, ms + 250));
+  }
+  return Math.min(60_000, 1000 * 2 ** attempt);
+}
 
 // ---------------------------------------------------------------------------
 // OpenAI-compatible client (Ollama, LM Studio, vLLM, llama.cpp server, ...)
@@ -34,12 +52,34 @@ export interface OpenAICompatOptions {
   apiKey?: string;
   models: Record<ModelTier, string>;
   timeoutMs?: number;
+  /** Retries on 429 / 503 before giving up with RateLimitError. Default 6. */
+  maxRetries?: number;
+  /** Injected for tests. */
+  sleep?: (ms: number) => Promise<void>;
 }
 
 export class OpenAICompatClient implements LlmClient {
+  /** Count of 429/503 responses seen, so callers can report rate limiting separately. */
+  rateLimitHits = 0;
+
   constructor(private readonly o: OpenAICompatOptions) {}
 
   async complete(req: LlmRequest): Promise<LlmResponse> {
+    const max = this.o.maxRetries ?? 6;
+    const sleep = this.o.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await this.once(req);
+      } catch (e) {
+        if (!(e instanceof RetryableHttp)) throw e;
+        this.rateLimitHits++;
+        if (attempt >= max) throw new RateLimitError(`rate limited after ${max} retries: HTTP ${e.status}`);
+        await sleep(e.delayMs);
+      }
+    }
+  }
+
+  private async once(req: LlmRequest): Promise<LlmResponse> {
     const model = this.o.models[req.tier ?? "workhorse"];
     const url = this.o.baseUrl.replace(/\/+$/, "") + "/chat/completions";
     const ctrl = new AbortController();
@@ -62,6 +102,11 @@ export class OpenAICompatClient implements LlmClient {
           ],
         }),
       });
+      if (res.status === 429 || res.status === 503) {
+        const body = await res.text();
+        throw new RetryableHttp(res.status, retryDelayMs(res.headers.get("retry-after"), body, 0));
+      }
+      // Never echo request headers; the body of an error response is safe to show.
       if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
       const j = (await res.json()) as {
         model?: string;
@@ -156,6 +201,8 @@ export interface ResolvedProvider {
   client: LlmClient | null;
   /** Present when the provider is paid and wrapped in a spend cap. */
   budget?: BudgetedClient;
+  /** The raw HTTP client for OpenAI-compatible providers (exposes rateLimitHits). */
+  transport?: OpenAICompatClient;
   /** One line for the user explaining what was chosen and why. */
   note: string;
 }
@@ -198,10 +245,10 @@ export function resolveProvider(env: NodeJS.ProcessEnv = process.env): ResolvedP
     if (!local && cap !== undefined) {
       const price = requirePricing(env);
       const budget = new BudgetedClient(client, cap, price);
-      return { kind, client: budget, budget, note: `openai-compatible endpoint ${baseUrl} (cap $${cap})` };
+      return { kind, client: budget, budget, transport: client, note: `openai-compatible endpoint ${baseUrl} (cap $${cap})` };
     }
     if (!local) throw new ProviderConfigError(`remote endpoint ${baseUrl} is paid or unknown: set REE_MAX_SPEND_USD and prices`);
-    return { kind, client, note: `local model at ${baseUrl} (no spend cap needed)` };
+    return { kind, client, transport: client, note: `local model at ${baseUrl} (no spend cap needed)` };
   }
 
   if (kind === "anthropic") {
@@ -228,4 +275,13 @@ function requirePricing(env: NodeJS.ProcessEnv): Pricing {
     );
   }
   return { inputPerMTok: inp, outputPerMTok: out };
+}
+
+class RetryableHttp extends Error {
+  constructor(
+    readonly status: number,
+    readonly delayMs: number,
+  ) {
+    super(`HTTP ${status}`);
+  }
 }

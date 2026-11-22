@@ -35,7 +35,7 @@ import { callables, definedNames, probePasses, type Probe } from "./score.js";
 import { analyze } from "../../src/core/analyze.js";
 import { ReconstructionPipeline } from "../../src/agents/pipeline.js";
 import { DryRunClient, type LlmClient, type LlmRequest, type LlmResponse } from "../../src/agents/llm.js";
-import { ProviderConfigError, resolveProvider, SpendCapError, type BudgetedClient } from "../../src/agents/providers.js";
+import { ProviderConfigError, RateLimitError, resolveProvider, SpendCapError, type BudgetedClient, type OpenAICompatClient } from "../../src/agents/providers.js";
 import { writeAsar } from "../fixtures/generate.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -202,6 +202,10 @@ interface Row {
   outputTokens: number;
   usd: number | null;
   seconds: number;
+  /** 429/503 responses absorbed by backoff during this fixture. */
+  rateLimitHits: number;
+  /** Set when the fixture failed for availability (rate limit), not quality — excluded from scores. */
+  rateLimited?: boolean;
   error?: string;
 }
 
@@ -221,6 +225,7 @@ async function main(): Promise<void> {
 
   let base: LlmClient;
   let budget: BudgetedClient | undefined;
+  let transport: OpenAICompatClient | undefined;
   let providerNote: string;
   if (dry) {
     base = new DryRunClient();
@@ -244,6 +249,7 @@ async function main(): Promise<void> {
     }
     base = p.client;
     budget = p.budget;
+    transport = p.transport;
     providerNote = p.note;
   }
   console.log(`[bench:reconstruct] provider: ${providerNote}`);
@@ -252,11 +258,12 @@ async function main(): Promise<void> {
   for (const fx of FIXTURES.filter((f) => !only || f.name.startsWith(only))) {
     const t0 = Date.now();
     const spentBefore = budget?.ledger.usd ?? 0;
+    const hitsBefore = transport?.rateLimitHits ?? 0;
     const meter = new Meter(base);
     const row: Row = {
       fixture: fx.name, source: fx.source, license: fx.license, format: fx.format, build: fx.build,
       slices: 0, reconstructed: 0, verifierAccepted: 0, nameRecall: "-", namesFound: [], behavior: "-",
-      behaviorDetail: {}, calls: 0, inputTokens: 0, outputTokens: 0, usd: null, seconds: 0,
+      behaviorDetail: {}, calls: 0, inputTokens: 0, outputTokens: 0, usd: null, seconds: 0, rateLimitHits: 0,
     };
     try {
       const artifact = fx.make();
@@ -291,6 +298,10 @@ async function main(): Promise<void> {
         row.behavior = "not checked";
       }
     } catch (e) {
+      if (e instanceof RateLimitError) {
+        row.rateLimited = true;
+        row.nameRecall = row.behavior = "n/a (rate-limited)";
+      }
       row.error = e instanceof SpendCapError ? `spend cap reached: ${e.message}` : (e as Error).message.slice(0, 300);
       if (e instanceof SpendCapError) console.error(`[bench:reconstruct] ${row.error}`);
     }
@@ -299,10 +310,11 @@ async function main(): Promise<void> {
     row.outputTokens = meter.outputTokens;
     row.usd = budget ? +(budget.ledger.usd - spentBefore).toFixed(4) : dry ? null : 0;
     row.seconds = Math.round((Date.now() - t0) / 100) / 10;
+    row.rateLimitHits = (transport?.rateLimitHits ?? 0) - hitsBefore;
     rows.push(row);
     console.log(
       `${fx.name.padEnd(34)} slices=${row.slices} recon=${row.reconstructed} names=${row.nameRecall} behavior=${row.behavior} ` +
-        `tokens=${row.inputTokens}/${row.outputTokens} usd=${row.usd ?? "-"}${row.error ? `  ERROR: ${row.error}` : ""}`,
+        `tokens=${row.inputTokens}/${row.outputTokens} usd=${row.usd ?? "-"} 429s=${row.rateLimitHits}${row.error ? `  ERROR: ${row.error}` : ""}`,
     );
     if (row.error?.startsWith("spend cap")) break;
   }
@@ -314,9 +326,11 @@ async function main(): Promise<void> {
     verify,
     maxUnits,
     totalUsd: budget ? +budget.ledger.usd.toFixed(4) : null,
+    totalRateLimitHits: transport?.rateLimitHits ?? 0,
+    label: arg("--label") ?? (dry ? "dry-run" : "run"),
     rows,
   };
-  const file = join(here, dry ? "results.dryrun.json" : "results.json");
+  const file = join(here, dry ? "results.dryrun.json" : `results.${(arg("--label") ?? "run").replace(/[^\w-]/g, "_")}.json`);
   writeFileSync(file, JSON.stringify(out, null, 2));
   console.log(`\nwrote ${file.replace(root + "/", "")}${budget ? `  (total spend $${budget.ledger.usd.toFixed(4)})` : ""}`);
 }

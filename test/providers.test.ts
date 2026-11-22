@@ -98,3 +98,50 @@ test("BudgetedClient: refuses before sending when worst case would cross the cap
   assert.equal(sent, 2, "refused call was never sent");
   assert.ok(b.ledger.usd <= 0.05);
 });
+
+test("OpenAICompatClient: backs off on 429 using Groq's hint, then succeeds", async () => {
+  let n = 0;
+  const { createServer: cs } = await import("node:http");
+  const srv = cs((req, res) => {
+    req.resume();
+    req.on("end", () => {
+      if (n++ < 2) {
+        res.statusCode = 429;
+        res.end(JSON.stringify({ error: { message: "Rate limit reached. Please try again in 1.5s." } }));
+        return;
+      }
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify({ choices: [{ message: { content: "ok" } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }));
+    });
+  });
+  await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+  const waits: number[] = [];
+  try {
+    const port = (srv.address() as AddressInfo).port;
+    const c = new OpenAICompatClient({
+      baseUrl: `http://127.0.0.1:${port}/v1`, models: { workhorse: "m", deep: "m" },
+      sleep: async (ms) => void waits.push(ms),
+    });
+    const r = await c.complete({ system: "s", prompt: "p" });
+    assert.equal(r.text, "ok");
+    assert.equal(c.rateLimitHits, 2);
+    assert.deepEqual(waits, [1750, 1750]);
+  } finally {
+    srv.close();
+  }
+});
+
+test("OpenAICompatClient: persistent 429 surfaces as RateLimitError, not a quality failure", async () => {
+  const { createServer: cs } = await import("node:http");
+  const { RateLimitError } = await import("../src/agents/providers.js");
+  const srv = cs((req, res) => { req.resume(); req.on("end", () => { res.statusCode = 429; res.setHeader("retry-after", "2"); res.end("{}"); }); });
+  await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+  try {
+    const port = (srv.address() as AddressInfo).port;
+    const c = new OpenAICompatClient({ baseUrl: `http://127.0.0.1:${port}/v1`, models: { workhorse: "m", deep: "m" }, maxRetries: 2, sleep: async () => {} });
+    await assert.rejects(() => c.complete({ system: "s", prompt: "p" }), RateLimitError);
+    assert.equal(c.rateLimitHits, 3);
+  } finally {
+    srv.close();
+  }
+});
