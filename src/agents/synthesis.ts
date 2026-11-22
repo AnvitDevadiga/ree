@@ -92,7 +92,16 @@ function splitNotes(text: string): { source: string; notes: string } {
   return { source: stripFences(text.slice(0, idx)), notes: text.slice(idx + "// notes:".length).trim() };
 }
 
-function stripFences(text: string): string {
-  const m = text.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
-  return (m ? m[1]! : text).trim();
+/**
+ * Remove Markdown code fences around a reconstruction. Handles a closed fence,
+ * and also an unclosed one — models often put the `// notes:` trailer inside the
+ * fence, so splitting at the trailer cuts the closing fence off.
+ */
+export function stripFences(text: string): string {
+  const closed = text.match(/```[\w+-]*[ \t]*\r?\n([\s\S]*?)\r?\n?```/);
+  if (closed) return closed[1]!.trim();
+  return text
+    .replace(/^\s*```[\w+-]*[ \t]*\r?\n/, "")
+    .replace(/\r?\n?```\s*$/, "")
+    .trim();
 }

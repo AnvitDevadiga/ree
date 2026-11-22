@@ -42,3 +42,14 @@ test("score: the original sources pass every probe (oracle)", { skip: !existsSyn
     for (const n of fx.truthFunctions) assert.ok(names.has(n), `${fx.name}: oracle missing name ${n}`);
   }
 });
+
+test("score: functions exposed on a bundle's global object count (var lib = IIFE)", () => {
+  const src = `var lib = (function () {
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]); }
+    function dlv(o, k, d, i) { k = k.split ? k.split(".") : k; for (i = 0; i < k.length; i++) o = o ? o[k[i]] : undefined; return o === undefined ? d : o; }
+    var out = {}; Object.defineProperty(out, "escapeHtml", { get: () => escapeHtml, enumerable: true }); out.dlv = dlv; return out;
+  })();`;
+  const fns = [...callables(src).values()];
+  const fx = FIXTURES.find((f) => f.name.startsWith("escape-html"))!;
+  for (const probe of fx.probes) assert.ok(fns.some((f) => probePasses(f, probe)), probe.label);
+});

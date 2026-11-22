@@ -91,7 +91,9 @@ export const FIXTURES: Fixture[] = [
     probes: [
       { label: "parse", cases: [{ args: ["2h"], expect: 7200000 }, { args: ["1.5d"], expect: 129600000 }, { args: ["100"], expect: 100 }] },
       { label: "fmtShort", cases: [{ args: [7200000], expect: "2h" }, { args: [1500], expect: "2s" }] },
-      { label: "fmtLong", cases: [{ args: [7200000], expect: "2 hours" }, { args: [60000], expect: "1 minute" }] },
+      // Probe the public API: fmtLong is a private helper in the original and
+      // only reachable as ms(n, { long: true }).
+      { label: "ms(n, {long:true})", cases: [{ args: [7200000, { long: true }], expect: "2 hours" }, { args: [60000, { long: true }], expect: "1 minute" }] },
     ],
     make: () => bundle(join(fetchPkg("ms@2.1.3"), "index.js"), join(buildDir, "ms.bundle.js"), false),
   },
@@ -204,6 +206,8 @@ interface Row {
   seconds: number;
   /** 429/503 responses absorbed by backoff during this fixture. */
   rateLimitHits: number;
+  /** Per-unit reconstruction and verdict, for the eval write-up. */
+  units?: Array<{ name: string; tier: string; source: string; verdict?: { accepted: boolean; explicit: boolean; rationale: string } }>;
   /** Set when the fixture failed for availability (rate limit), not quality — excluded from scores. */
   rateLimited?: boolean;
   error?: string;
@@ -276,6 +280,14 @@ async function main(): Promise<void> {
       });
       row.reconstructed = result.units.length;
       row.verifierAccepted = result.units.filter((u) => u.verdict?.accepted).length;
+      row.units = result.units.map((u) => ({
+        name: u.recon.name,
+        tier: u.recon.tier,
+        source: u.recon.source.slice(0, 60000),
+        verdict: u.verdict
+          ? { accepted: u.verdict.accepted, explicit: u.verdict.explicit, rationale: u.verdict.rationale.slice(0, 600) }
+          : undefined,
+      }));
 
       const sources = result.units.map((u) => u.recon.source);
       const names = new Set<string>();

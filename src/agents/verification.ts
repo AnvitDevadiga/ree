@@ -62,14 +62,26 @@ function gatherEvidence(slice: ContextSlice, model: ArtifactModel): string {
   ].join("\n");
 }
 
-function parseVerdict(unitId: string, text: string): Verdict {
-  const line = text.split("\n").reverse().find((l) => /^\s*VERDICT:/i.test(l)) ?? "";
-  if (!line) {
+/**
+ * Strip Markdown decoration models commonly wrap a verdict line in
+ * (`**VERDICT:** accept`, `### VERDICT: reject`, `> VERDICT:`, `` `VERDICT: accept` ``).
+ */
+function plainLine(l: string): string {
+  return l.replace(/[*_`]/g, "").replace(/^\s*(?:#{1,6}|>|[-+]\s)\s*/, "").trim();
+}
+
+export function parseVerdict(unitId: string, text: string): Verdict {
+  const raw = text.split("\n").reverse().find((l) => /^VERDICT\s*:/i.test(plainLine(l))) ?? "";
+  if (!raw) {
     return { unitId, accepted: false, explicit: false, confidence: "low", testHarness: text.trim(), rationale: "no verdict returned" };
   }
-  const accepted = /VERDICT:\s*accept\b/i.test(line);
-  const conf = /confidence=(low|medium|high)/i.exec(line)?.[1]?.toLowerCase() as Verdict["confidence"] | undefined;
-  const rationale = line.replace(/^\s*VERDICT:.*?(—|-{1,2})\s*/i, "").trim() || "no rationale given";
-  const harness = text.slice(0, text.lastIndexOf(line)).trim();
-  return { unitId, accepted, explicit: true, confidence: conf ?? "low", testHarness: harness, rationale };
+  const line = plainLine(raw);
+  const decision = /^VERDICT\s*:\s*(accept|reject)\b/i.exec(line)?.[1]?.toLowerCase();
+  if (!decision) {
+    return { unitId, accepted: false, explicit: false, confidence: "low", testHarness: text.trim(), rationale: `unparseable verdict: ${line.slice(0, 120)}` };
+  }
+  const conf = /confidence\s*[=:]\s*(low|medium|high)/i.exec(line)?.[1]?.toLowerCase() as Verdict["confidence"] | undefined;
+  const rationale = line.replace(/^VERDICT\s*:.*?(—|–|-{1,2})\s*/i, "").trim() || "no rationale given";
+  const harness = text.slice(0, text.lastIndexOf(raw)).trim();
+  return { unitId, accepted: decision === "accept", explicit: true, confidence: conf ?? "low", testHarness: harness, rationale };
 }

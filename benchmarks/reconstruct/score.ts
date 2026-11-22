@@ -40,10 +40,37 @@ export function callables(src: string): Map<string, Function> {
   const take = (k: string, v: unknown) => {
     if (typeof v === "function" && !fns.has(k)) fns.set(k, v as Function);
   };
-  for (const k of Object.getOwnPropertyNames(ctx)) take(k, (ctx as Record<string, unknown>)[k]);
+  // Public API one level deep: a bundle commonly exposes `var lib = { fn, ... }`
+  // or `module.exports = { fn }`, so functions on exposed objects count too.
+  const members = (prefix: string, obj: unknown) => {
+    if (!obj || (typeof obj !== "object" && typeof obj !== "function")) return;
+    let keys: string[] = [];
+    try {
+      keys = Object.keys(obj as object).slice(0, 200);
+    } catch {
+      return;
+    }
+    for (const k of keys) {
+      try {
+        take(`${prefix}.${k}`, (obj as Record<string, unknown>)[k]);
+      } catch {
+        /* throwing getter */
+      }
+    }
+  };
+  for (const k of Object.getOwnPropertyNames(ctx)) {
+    let v: unknown;
+    try {
+      v = (ctx as Record<string, unknown>)[k];
+    } catch {
+      continue;
+    }
+    take(k, v);
+    if (k !== "module" && k !== "exports") members(k, v);
+  }
   const ex = module.exports as unknown;
   if (typeof ex === "function") take("module.exports", ex);
-  else if (ex && typeof ex === "object") for (const [k, v] of Object.entries(ex)) take(`exports.${k}`, v);
+  members("exports", ex);
   return fns;
 }
 
