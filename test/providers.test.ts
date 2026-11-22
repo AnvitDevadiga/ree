@@ -183,3 +183,26 @@ test("OpenAICompatClient: paces itself from x-ratelimit headers instead of hitti
     srv.close();
   }
 });
+
+test("OpenAICompatClient: a daily-quota 429 fails fast instead of retrying", async () => {
+  const { createServer: cs } = await import("node:http");
+  const { RateLimitError } = await import("../src/agents/providers.js");
+  let calls = 0;
+  const srv = cs((req, res) => {
+    req.resume();
+    req.on("end", () => {
+      calls++;
+      res.statusCode = 429;
+      res.end(JSON.stringify({ error: { message: "Rate limit reached on tokens per day (TPD): Limit 200000, Used 199000. Please try again in 38s." } }));
+    });
+  });
+  await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+  try {
+    const port = (srv.address() as AddressInfo).port;
+    const c = new OpenAICompatClient({ baseUrl: `http://127.0.0.1:${port}/v1`, models: { workhorse: "m", deep: "m" }, sleep: async () => {} });
+    await assert.rejects(() => c.complete({ system: "s", prompt: "p" }), (e: Error) => e instanceof RateLimitError && /daily quota/.test(e.message));
+    assert.equal(calls, 1, "no retries against a daily quota");
+  } finally {
+    srv.close();
+  }
+});

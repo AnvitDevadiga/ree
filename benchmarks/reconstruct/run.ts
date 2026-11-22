@@ -259,7 +259,8 @@ async function main(): Promise<void> {
   console.log(`[bench:reconstruct] provider: ${providerNote}`);
 
   const rows: Row[] = [];
-  for (const fx of FIXTURES.filter((f) => !only || f.name.startsWith(only))) {
+  const skip = (arg("--skip") ?? "").split(",").filter(Boolean);
+  for (const fx of FIXTURES.filter((f) => (!only || f.name.startsWith(only)) && !skip.some((k) => f.name.startsWith(k)))) {
     const t0 = Date.now();
     const spentBefore = budget?.ledger.usd ?? 0;
     const hitsBefore = transport?.rateLimitHits ?? 0;

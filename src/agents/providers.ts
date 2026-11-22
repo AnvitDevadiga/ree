@@ -76,6 +76,8 @@ export class OpenAICompatClient implements LlmClient {
   rateLimitHits = 0;
   /** Milliseconds spent waiting proactively for the token window to refill. */
   pacedMs = 0;
+  /** The provider's message from the most recent 429/503, for reporting. */
+  lastRateLimitMessage?: string;
   /** Last rate-limit state reported by the provider's x-ratelimit-* headers. */
   private window?: { remainingTokens: number; resetMs: number; at: number };
 
@@ -91,6 +93,10 @@ export class OpenAICompatClient implements LlmClient {
       } catch (e) {
         if (!(e instanceof RetryableHttp)) throw e;
         this.rateLimitHits++;
+        // A daily quota can't be waited out within a run; fail fast and say so.
+        if (/per day|\bTPD\b|\bRPD\b|daily/i.test(this.lastRateLimitMessage ?? "")) {
+          throw new RateLimitError(`daily quota exhausted: ${this.lastRateLimitMessage}`);
+        }
         if (attempt >= max) throw new RateLimitError(`rate limited after ${max} retries: HTTP ${e.status}`);
         await sleep(e.delayMs);
       }
@@ -148,6 +154,11 @@ export class OpenAICompatClient implements LlmClient {
       this.recordWindow(res.headers);
       if (res.status === 429 || res.status === 503) {
         const body = await res.text();
+        try {
+          this.lastRateLimitMessage = (JSON.parse(body) as { error?: { message?: string } }).error?.message?.slice(0, 400) ?? body.slice(0, 400);
+        } catch {
+          this.lastRateLimitMessage = body.slice(0, 400);
+        }
         throw new RetryableHttp(res.status, retryDelayMs(res.headers.get("retry-after"), body, 0));
       }
       // Never echo request headers; the body of an error response is safe to show.
