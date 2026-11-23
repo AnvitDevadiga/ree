@@ -17,6 +17,15 @@ Licenses were checked for compatibility with MIT before integration.
 | Ghidra (`analyzeHeadless`) | Native ELF/Mach-O/PE → C pseudocode + call graph | Apache-2.0 | https://github.com/NationalSecurityAgency/ghidra |
 | hdiutil | Read-only `.dmg` mounting (macOS) | Ships with macOS | Apple |
 
+## Benchmark-only tools (dev dependencies or downloaded; never shipped)
+
+| Tool | Used for | License | Project |
+|---|---|---|---|
+| Terser 5.51.4 | protection benchmark (minification) | BSD-2-Clause | https://github.com/terser/terser |
+| javascript-obfuscator 5.10.1 | protection benchmark (obfuscation) | BSD-2-Clause | https://github.com/javascript-obfuscator/javascript-obfuscator |
+| R8 9.5.33 (Google Maven, SHA-256 pinned) | protection benchmark (Android shrinking/obfuscation) | BSD-3-Clause | https://r8.googlesource.com/r8 |
+| decompyle3 3.9.3 | `.pyc` decompiler evaluation only | GPL-3.0 | https://github.com/rocky/python-decompile3 |
+
 ## Test fixtures (downloaded, not redistributed)
 
 These open-source projects are fetched at test/benchmark time into gitignored

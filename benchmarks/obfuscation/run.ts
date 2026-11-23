@@ -189,7 +189,11 @@ function toMarkdown(rows: Row[]): string {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   runObfuscationBench()
-    .then((rows) => {
+    .then(async (rows) => {
+      const { runJvmBench } = await import("./jvm.js");
+      const jvm = await runJvmBench();
+      if (jvm.skipped) console.log(`[bench:obfuscation] JVM/R8 section skipped: ${jvm.skipped}`);
+      rows.push(...jvm.rows);
       const md = toMarkdown(rows);
       writeFileSync(join(here, "RESULTS.md"), md);
       writeFileSync(join(here, "results.json"), JSON.stringify({ generated: new Date().toISOString(), rows }, null, 2));

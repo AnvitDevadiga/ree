@@ -1,6 +1,6 @@
 # Real-world protection benchmark (JavaScript)
 
-Generated 2026-11-23T06:34:18.768Z by `npm run bench:obfuscation`. Deterministic pass only; no model calls.
+Generated 2026-11-23T08:44:31.117Z by `npm run bench:obfuscation`. Deterministic pass only; no model calls.
 
 | Source | Protection | Size | Parsed | Units | Literals visible | Decoder flagged | Leaks | Tokens (raw → REE) | Gate |
 |---|---|---:|:-:|---:|---:|:-:|---:|---|:-:|
@@ -14,3 +14,6 @@ Generated 2026-11-23T06:34:18.768Z by `npm run bench:obfuscation`. Deterministic
 | ms@2.1.3 | obf-low | 2336 | ✅ | 4 | 20/20 | — | 0 | 762 → 801 | ✅ |
 | ms@2.1.3 | obf-medium | 7745 | ✅ | 6 | 20/20 | yes | 0 | 2215 → 2256 | ✅ |
 | ms@2.1.3 | obf-high | 21493 | ✅ | 6 | 17/20 | yes | 0 | 6141 → 6134 | ✅ |
+| inventory-cli (jvm) | none (jar) [vineflower] | 3184 | ✅ | 2 | 2/2 · names 5/5 | — | 0 | 0 → 574 | ✅ |
+| inventory-cli (jvm) | r8-classfile [vineflower] | 2390 | ✅ | 3 | 2/2 · names 2/5 | — | 0 | 0 → 550 | ✅ |
+| inventory-cli (jvm) | r8-dex (apk) [jadx] | 1654 | ✅ | 3 | 2/2 · names 2/5 | — | 0 | 0 → 481 | ✅ |

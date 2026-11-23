@@ -1,6 +1,6 @@
 # Real-adversary benchmark — REE vs. genuine bla-agents
 
-Generated 2026-11-23T08:42:01.731Z by `npm run bench:real` against **real `bla-agents@3.3.2`** output
+Generated 2026-11-23T08:44:59.118Z by `npm run bench:real` against **real `bla-agents@3.3.2`** output
 (`--intensity bankrupt --llm-directives`). Token counts are REE's deterministic estimate, not a model tokenizer.
 
 **Injection leaks must be 0** — any BLA prompt-injection marker reaching a context slice is a regression.

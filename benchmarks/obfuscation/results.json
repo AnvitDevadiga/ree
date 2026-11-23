@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-23T06:34:18.768Z",
+  "generated": "2026-11-23T08:44:31.117Z",
   "rows": [
     {
       "source": "inventory-cli",
@@ -139,6 +139,48 @@
       "leaks": 0,
       "naiveTokens": 6141,
       "reeTokens": 6134,
+      "gate": "pass"
+    },
+    {
+      "source": "inventory-cli (jvm)",
+      "protection": "none (jar) [vineflower]",
+      "bytes": 3184,
+      "parsed": true,
+      "units": 2,
+      "literals": "2/2 · names 5/5",
+      "literalRatio": 1,
+      "decoder": false,
+      "leaks": 0,
+      "naiveTokens": 0,
+      "reeTokens": 574,
+      "gate": "pass"
+    },
+    {
+      "source": "inventory-cli (jvm)",
+      "protection": "r8-classfile [vineflower]",
+      "bytes": 2390,
+      "parsed": true,
+      "units": 3,
+      "literals": "2/2 · names 2/5",
+      "literalRatio": 1,
+      "decoder": false,
+      "leaks": 0,
+      "naiveTokens": 0,
+      "reeTokens": 550,
+      "gate": "pass"
+    },
+    {
+      "source": "inventory-cli (jvm)",
+      "protection": "r8-dex (apk) [jadx]",
+      "bytes": 1654,
+      "parsed": true,
+      "units": 3,
+      "literals": "2/2 · names 2/5",
+      "literalRatio": 1,
+      "decoder": false,
+      "leaks": 0,
+      "naiveTokens": 0,
+      "reeTokens": 481,
       "gate": "pass"
     }
   ]
