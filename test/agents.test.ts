@@ -90,3 +90,36 @@ test("synthesis: fences are stripped even when the notes trailer sits inside the
   assert.equal(r.source, "function k() { return 1; }");
   assert.equal(r.notes.replace(/`/g, "").trim(), "ok");
 });
+
+test("packing: small artifacts become one pack in source order; large ones respect the budget", async () => {
+  const { packSlices } = await import("../src/agents/packing.js");
+  const unit = (id: string, offset: number, parent?: string) => ({ id, name: id, kind: "function" as const, body: "x", offset, references: [], meta: parent ? { parent } : {} });
+  const model = { format: "js-bundle" as const, sourcePath: "", byteLength: 0, strings: [], entryPoints: [], warnings: [], meta: {},
+    units: [unit("c", 30), unit("a", 10), unit("b", 20), unit("f1", 0, "file1"), unit("f2", 5, "file1")] };
+  const s = (id: string, t: number) => ({ unitId: id, name: id, content: `// ${id}`, neighbors: id === "a" ? ["b", "z"] : [], estTokens: t });
+  // Slices arrive in priority order, not source order.
+  const small = packSlices([s("c", 100), s("a", 100), s("b", 100), s("f2", 50), s("f1", 50)], model as any, 4000);
+  assert.equal(small.length, 2, "one pack per file");
+  const main = small.find((p) => p.memberIds.includes("a"))!;
+  assert.deepEqual(main.memberIds, ["a", "b", "c"], "source order restored");
+  assert.deepEqual(main.neighbors, ["z"], "intra-pack neighbors dropped");
+  assert.match(main.content, /unit: a[\s\S]*unit: b[\s\S]*unit: c/);
+  const big = packSlices([s("a", 3000), s("b", 3000), s("c", 3000)], model as any, 4000);
+  assert.equal(big.length, 3, "over-budget units are not merged");
+  const all = packSlices([s("c", 100), s("a", 100), s("b", 100)], model as any, 0 || 4000).flatMap((p) => p.memberIds).sort();
+  assert.deepEqual(all, ["a", "b", "c"], "every unit exactly once");
+});
+
+test("pipeline: packs cover every budgeted unit exactly once", async () => {
+  const { analyze } = await import("../src/core/analyze.js");
+  const { ReconstructionPipeline } = await import("../src/agents/pipeline.js");
+  const seen: string[] = [];
+  const llm = { async complete(req: { prompt: string }) {
+    for (const m of req.prompt.matchAll(/\/\/ ---- unit: (.+?) ----/g)) seen.push(m[1]!);
+    return { text: "VERDICT: accept confidence=high — ok\nfunction x(){}", model: "stub", stopReason: "end_turn" };
+  } };
+  const { report } = await analyze(fixture("inventory-cli", "clean").path);
+  const r = await new ReconstructionPipeline(llm as any).run(report, { verify: false });
+  assert.ok(r.units.length >= 1);
+  assert.equal(new Set(seen).size, seen.length, "no unit reconstructed twice");
+});

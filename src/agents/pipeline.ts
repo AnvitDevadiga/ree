@@ -19,12 +19,18 @@ import type { LlmClient } from "./llm.js";
 import { TriageAgent, type TriagePlan } from "./triage.js";
 import { SynthesisAgent, type ReconstructedUnit } from "./synthesis.js";
 import { VerificationAgent, type Verdict } from "./verification.js";
+import { DEFAULT_PACK_TOKENS, packSlices } from "./packing.js";
 
 export interface PipelineOptions {
   tokenBudget?: number;
   maxUnits?: number;
   verify?: boolean;
   maxRetries?: number;
+  /**
+   * Pack adjacent units from the same file into one reconstruction call up to
+   * this many tokens (0 disables packing). Default 4000.
+   */
+  packTokens?: number;
   onProgress?: (msg: string) => void;
 }
 
@@ -52,11 +58,25 @@ export class ReconstructionPipeline {
     log("triage: mapping boundaries and entry points");
     const plan = await this.triage.run(report);
 
-    const slices = toContextSlices(report.model, o.tokenBudget).slice(0, o.maxUnits);
+    const raw = toContextSlices(report.model, o.tokenBudget);
+    const packTokens = opts.packTokens ?? DEFAULT_PACK_TOKENS;
+    const slices = (packTokens > 0 ? packSlices(raw, report.model, packTokens) : raw).slice(0, o.maxUnits);
     const sliceById = new Map(slices.map((s) => [s.unitId, s] as const));
+    // A pack is keyed by its first member; map every member to its pack.
+    const packOf = new Map<string, string>();
+    for (const s of slices) for (const m of (s as { memberIds?: string[] }).memberIds ?? [s.unitId]) packOf.set(m, s.unitId);
 
-    // Reconstruct in the plan's order, but only for units that made the budget.
-    const order = plan.reconstructionOrder.filter((id) => sliceById.has(id));
+    // Reconstruct in the plan's order (first appearance of any member), then any
+    // packs the plan didn't mention, so every budgeted unit is covered once.
+    const order: string[] = [];
+    const seen = new Set<string>();
+    for (const id of [...plan.reconstructionOrder, ...slices.map((s) => s.unitId)]) {
+      const p = packOf.get(id);
+      if (p && sliceById.has(p) && !seen.has(p)) {
+        seen.add(p);
+        order.push(p);
+      }
+    }
     const units: ReconstructionResult["units"] = [];
     let accepted = 0;
     let escalated = 0;

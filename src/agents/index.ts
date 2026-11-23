@@ -16,3 +16,4 @@ export {
   type Pricing,
   type SpendLedger,
 } from "./providers.js";
+export { packSlices, DEFAULT_PACK_TOKENS, type PackedSlice } from "./packing.js";
