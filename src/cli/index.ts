@@ -87,6 +87,21 @@ program
       console.log();
       console.log(`pruned ${s.unitsPruned}  quarantined ${s.unitsQuarantined}  sanitized ${s.stringsSanitized}  ${green(`token reduction ${pct(s.estTokensBefore, s.estTokensAfter)}`)}`);
       console.log(`entry points: ${report.model.entryPoints.map((e) => cyan(e.detail ?? e.unitId)).join(", ") || dim("(none)")}`);
+      if (report.model.format === "ipa") {
+        const m = report.model.meta as Record<string, unknown>;
+        const line = (k: string, v: unknown) => v !== undefined && v !== null && v !== "" && console.log(`${dim(k.padEnd(14))} ${Array.isArray(v) ? v.join(", ") || "(none)" : String(v)}`);
+        console.log(bold("\nios app"));
+        line("bundle", `${m.bundleId ?? "?"} ${m.version ?? ""}${m.build ? ` (${m.build})` : ""}`);
+        line("minimum iOS", m.minimumOS);
+        line("executable", `${m.executable} — ${m.encrypted ? red("encrypted (App Store); code not analyzed") : m.encrypted === false ? "unencrypted" : "not found"}`);
+        line("architectures", m.architectures);
+        line("permissions", m.usageDescriptions);
+        line("url schemes", m.urlSchemes);
+        if (m.allowsArbitraryLoads) line("transport", yellow("NSAllowsArbitraryLoads = true (plain-HTTP allowed)"));
+        line("frameworks", m.frameworks);
+        line("extensions", m.extensions);
+        line("bundled JS", Number(m.jsBundles) ? `${m.jsBundles} file(s)${Number(m.hermesBundles) ? `, ${m.hermesBundles} Hermes` : ""}` : undefined);
+      }
       if (report.model.format === "apk") {
         const m = report.model.meta as Record<string, unknown>;
         const line = (k: string, v: unknown) => v !== undefined && v !== "" && console.log(`${dim(k.padEnd(14))} ${Array.isArray(v) ? v.join(", ") || "(none)" : String(v)}`);

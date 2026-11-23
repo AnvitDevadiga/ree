@@ -60,6 +60,7 @@ export const SUPPORTED_SUMMARY = [
   "Android APK / AAB (manifest, DEX and bundled JS always; Java source with optional jadx)",
   "Java JAR / .class (bytecode structure always; Java source with optional Vineflower)",
   ".NET assemblies (.dll/.exe metadata always; C# source with optional ilspycmd)",
+  "iOS .ipa (structure only; encrypted App Store binaries are detected, never decrypted)",
   "macOS .dmg images (macOS only) and .app bundles / extracted app directories",
 ];
 
@@ -141,7 +142,7 @@ function classifyZip(tail: Uint8Array): Detection {
   const names = Buffer.from(tail).toString("latin1");
   if (/base\/manifest\/AndroidManifest\.xml/.test(names)) return { kind: "aab", label: "Android App Bundle (.aab)", route: "parser" };
   if (/AndroidManifest\.xml/.test(names) && /classes\d*\.dex/.test(names)) return { kind: "apk", label: "Android APK", route: "parser" };
-  if (/Payload\/[^/]+\.app\//.test(names)) return { kind: "ipa", label: "iOS app archive (.ipa)", route: "unsupported", hint: "structure-only .ipa support for unencrypted builds is planned" };
+  if (/Payload\/[^/]+\.app\//.test(names)) return { kind: "ipa", label: "iOS app archive (.ipa)", route: "parser" };
   if (/META-INF\/MANIFEST\.MF/.test(names) || /\.class/.test(names)) return { kind: "jar", label: "Java archive (.jar / .war)", route: "parser" };
   return { kind: "zip", label: "ZIP archive", route: "unsupported", hint: "extract it first, then point REE at the contents" };
 }

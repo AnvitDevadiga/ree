@@ -30,6 +30,7 @@ caches. They are not included in this repository or the npm package.
 | Newtonsoft.Json 13.0.3 (NuGet, netstandard2.0 DLL, SHA-256 pinned) | .NET tests (`npm run fixtures:dotnet`) | MIT | https://github.com/JamesNK/Newtonsoft.Json |
 | `inventory-native` (C, written for this repo, compiled locally) | native ground-truth tests (`npm run fixtures:native`) | MIT (this repo) | `benchmarks/fixtures/native.ts` |
 | CPython stdlib `colorsys.py` for 3.8, 3.10, 3.12, 3.13, 3.14 (`uv` installs) | `.pyc` decompiler evaluation (`npm run bench:pyc`) | PSF-2.0 | https://github.com/python/cpython |
+| `inventory-dev.ipa` / `inventory-appstore.ipa` (assembled from parts written for this repo; the App Store variant only sets `cryptid`, nothing is encrypted) | iOS tests (`npm run fixtures:ios`) | MIT (this repo) | `benchmarks/fixtures/ios.ts` |
 | ms 2.1.3 | reconstruction benchmark | MIT | https://github.com/vercel/ms |
 | escape-html 1.0.3 | reconstruction benchmark | MIT | https://github.com/component/escape-html |
 | dlv 1.1.3 | reconstruction benchmark | MIT | https://github.com/developit/dlv |

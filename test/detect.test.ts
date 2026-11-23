@@ -52,6 +52,12 @@ test("detect: Java class vs universal Mach-O share 0xCAFEBABE", () => {
   assert.equal(classify(fat, fat).kind, "macho");
 });
 
+test("detect: every Phase 3 format routes to a parser", () => {
+  const z = (names: string) => classify(Buffer.from("PK\x03\x04", "latin1"), Buffer.from(names, "latin1")).route;
+  assert.equal(z("Payload/App.app/Info.plist"), "parser");
+  assert.equal(z("META-INF/MANIFEST.MF a/B.class"), "parser");
+});
+
 test("detect: APK and AAB are routed to the APK parser", () => {
   const z = (names: string) => classify(Buffer.from("PK\x03\x04", "latin1"), Buffer.from(names, "latin1"));
   assert.equal(z("AndroidManifest.xml classes.dex").route, "parser");
@@ -80,9 +86,9 @@ test("detect: directories route to the app front-end; .dmg by its koly trailer",
 });
 
 test("detect: unsupported message names the format, gives a hint, and lists what works", () => {
-  const msg = unsupportedMessage("x.ipa", classify(Buffer.from("PK\x03\x04", "latin1"), Buffer.from("Payload/App.app/Info.plist", "latin1")));
-  assert.match(msg, /iOS app archive/);
-  assert.match(msg, /unencrypted builds is planned/);
+  const msg = unsupportedMessage("x.tgz", classify(Buffer.from([0x1f, 0x8b, 8, 0]), Buffer.alloc(0)));
+  assert.match(msg, /gzip archive/);
+  assert.match(msg, /extract it first/);
   assert.match(msg, /Supported today:/);
   assert.match(msg, /Electron \.asar/);
 });

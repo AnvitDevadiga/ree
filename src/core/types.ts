@@ -18,6 +18,7 @@ export type ArtifactFormat =
   | "apk"
   | "jar"
   | "dotnet"
+  | "ipa"
   | "unknown";
 
 /** A single logical unit of code recovered from an artifact (a module, function, section). */

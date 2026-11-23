@@ -10,6 +10,7 @@
  */
 import type { AntiBlaFinding, ArtifactModel, CodeUnit } from "../core/types.js";
 import { getAnalysis } from "./session.js";
+import { redactInjections } from "../anti-bla/sanitizer.js";
 import { ReconstructionPipeline } from "../agents/pipeline.js";
 import { SynthesisAgent } from "../agents/synthesis.js";
 import { VerificationAgent } from "../agents/verification.js";
@@ -212,10 +213,16 @@ function findingSummary(f: AntiBlaFinding) {
   return { pass: f.pass, severity: f.severity, action: f.action, unitId: f.unitId, message: f.message.slice(0, 240) };
 }
 
+/**
+ * Metadata sits outside the untrustedArtifactData envelope, but many values come
+ * from the artifact itself (package names, titles, plist strings). Cap and
+ * redact every string so none can carry instructions to the calling agent.
+ */
 function summarizeMeta(m: ArtifactModel): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(m.meta)) {
-    if (v === null || ["string", "number", "boolean"].includes(typeof v)) out[k] = v;
+    if (typeof v === "string") out[k] = redactInjections(v.slice(0, 300)).text;
+    else if (v === null || typeof v === "number" || typeof v === "boolean") out[k] = v;
     else if (Array.isArray(v)) out[k] = `array(${v.length})`;
   }
   return out;

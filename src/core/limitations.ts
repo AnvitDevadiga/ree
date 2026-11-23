@@ -99,6 +99,19 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
     if (m.pinvokes?.length) out.push(`${m.pinvokes.length} P/Invoke import(s) call into native DLLs; the native side is not analyzed.`);
     out.push("No type-level call graph is built from IL, so nothing is pruned; obfuscated or renamed members are reported as they appear.");
   }
+  if (fmt === "ipa") {
+    const m = model.meta as { encrypted?: boolean | null; jsBundles?: number; frameworks?: string[] };
+    if (m.encrypted) {
+      out.push(
+        "The main executable is encrypted (App Store FairPlay). REE does not decrypt apps, so none of its code was analyzed — only the bundle's metadata, frameworks list and any bundled JavaScript. To study your own app, analyze an unencrypted development or ad-hoc build.",
+      );
+    } else if (m.encrypted === false) {
+      out.push("The main executable is unencrypted; its Mach-O structure (symbols, imports) was read. .ipa analysis is structure-only — Swift/Objective-C code is not decompiled.");
+    } else {
+      out.push("The main executable could not be found or read, so no native code was analyzed.");
+    }
+    if (m.frameworks?.length) out.push(`${m.frameworks.length} embedded framework(s) were listed but not analyzed.`);
+  }
   if (fmt === "wasm") {
     out.push("WASM is decoded to a WAT-style listing; high-level types and names beyond the name section are not recovered.");
   }

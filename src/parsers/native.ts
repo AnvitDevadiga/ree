@@ -41,6 +41,19 @@ export class NativeParser implements Parser {
   }
 }
 
+/** Structure-only parse (no Ghidra), for callers that embed a native binary (e.g. an .ipa). */
+export function parseNativeStructure(input: ParserInput): ArtifactModel {
+  const fmt = detectNative(input.bytes);
+  try {
+    if (fmt === "elf") return parseElf(input);
+    if (fmt === "macho") return parseMachO(input);
+    if (fmt === "pe") return parsePe(input);
+  } catch (e) {
+    return stringsOnly(input, fmt, `structural parse failed: ${(e as Error).message}`);
+  }
+  return stringsOnly(input, "unknown", "unrecognized native format");
+}
+
 /**
  * Optional: decompile functions to C with Ghidra headless and merge them into
  * the structural model — by name (Mach-O's leading underscore tolerated), then

@@ -16,8 +16,9 @@ import { NativeParser } from "./native.js";
 import { ApkParser } from "./apk.js";
 import { JarParser } from "./jar.js";
 import { DotnetParser } from "./dotnet.js";
+import { IpaParser } from "./ipa.js";
 
-export { AsarParser, JsBundleParser, WasmParser, PycParser, NativeParser, ApkParser, JarParser, DotnetParser };
+export { AsarParser, JsBundleParser, WasmParser, PycParser, NativeParser, ApkParser, JarParser, DotnetParser, IpaParser };
 
 export interface IngestOptions {
   /** Max bytes REE will read; larger files are rejected, never silently truncated. */
@@ -29,7 +30,7 @@ const DEFAULT_MAX_BYTES = 512 * 1024 * 1024;
 
 /** Order matters: magic-number formats first, JS (text sniffing) next, native last. */
 export function defaultParsers(): Parser[] {
-  return [new AsarParser(), new WasmParser(), new PycParser(), new ApkParser(), new JarParser(), new DotnetParser(), new NativeParser(), new JsBundleParser()];
+  return [new AsarParser(), new WasmParser(), new PycParser(), new ApkParser(), new IpaParser(), new JarParser(), new DotnetParser(), new NativeParser(), new JsBundleParser()];
 }
 
 export async function ingest(path: string, opts: IngestOptions = {}): Promise<ArtifactModel> {

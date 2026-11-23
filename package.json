@@ -30,7 +30,8 @@
     "fixtures:java": "tsx benchmarks/fixtures/java.ts",
     "fixtures:dotnet": "tsx benchmarks/fixtures/dotnet.ts",
     "fixtures:native": "tsx benchmarks/fixtures/native.ts",
-    "bench:pyc": "tsx benchmarks/pyc/evaluate.ts"
+    "bench:pyc": "tsx benchmarks/pyc/evaluate.ts",
+    "fixtures:ios": "tsx benchmarks/fixtures/ios.ts"
   },
   "files": [
     "dist",
