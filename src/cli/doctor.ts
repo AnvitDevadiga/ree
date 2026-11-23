@@ -8,7 +8,7 @@
  */
 import { platform } from "node:os";
 import { resolveProvider } from "../agents/providers.js";
-import { JADX, VINEFLOWER, which } from "../tools/external.js";
+import { ILSPY, JADX, VINEFLOWER, findTool, which, type ToolSpec } from "../tools/external.js";
 
 export { which };
 
@@ -23,6 +23,8 @@ export interface OptionalTool {
   platforms?: NodeJS.Platform[];
   /** Install commands per platform. */
   install: Partial<Record<NodeJS.Platform, string>>;
+  /** Full spec when the tool also lives outside PATH (e.g. ~/.dotnet/tools). */
+  spec?: ToolSpec;
 }
 
 /** Registry of optional tools. Each new integration adds an entry here. */
@@ -36,6 +38,7 @@ export const OPTIONAL_TOOLS: OptionalTool[] = [
   },
   { bin: JADX.bin, name: JADX.name, unlocks: JADX.unlocks, install: JADX.install as OptionalTool["install"] },
   { bin: VINEFLOWER.bin, name: VINEFLOWER.name, unlocks: VINEFLOWER.unlocks, install: VINEFLOWER.install as OptionalTool["install"] },
+  { bin: ILSPY.bin, name: ILSPY.name, unlocks: ILSPY.unlocks, install: ILSPY.install as OptionalTool["install"], spec: ILSPY },
 ];
 
 export interface DoctorReport {
@@ -54,7 +57,7 @@ export function runDoctor(env: NodeJS.ProcessEnv = process.env, required = ">=20
     return {
       name: t.name,
       bin: t.bin,
-      found: applicable ? which(t.bin, env) : null,
+      found: applicable ? (t.spec ? findTool(t.spec, env) : which(t.bin, env)) : null,
       unlocks: t.unlocks,
       install: t.install[plat],
       applicable,

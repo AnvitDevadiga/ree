@@ -27,7 +27,8 @@
     "bench:real": "tsx benchmarks/real/run.ts",
     "bench:reconstruct": "tsx benchmarks/reconstruct/run.ts",
     "fixtures:android": "tsx benchmarks/fixtures/fetch-android.ts",
-    "fixtures:java": "tsx benchmarks/fixtures/java.ts"
+    "fixtures:java": "tsx benchmarks/fixtures/java.ts",
+    "fixtures:dotnet": "tsx benchmarks/fixtures/dotnet.ts"
   },
   "files": [
     "dist",

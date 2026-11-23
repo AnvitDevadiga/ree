@@ -25,6 +25,8 @@ export interface ToolSpec {
   unlocks: string;
   platforms?: NodeJS.Platform[];
   install: Partial<Record<NodeJS.Platform | "any", string>>;
+  /** Extra directories to search besides PATH (e.g. ~/.dotnet/tools). Leading ~ is the home dir. */
+  extraDirs?: string[];
 }
 
 export const JADX: ToolSpec = {
@@ -50,6 +52,32 @@ export const VINEFLOWER: ToolSpec = {
     win32: "download vineflower.jar from https://github.com/Vineflower/vineflower/releases and add a 'vineflower.cmd' wrapper (needs Java 17+)",
   },
 };
+
+export const ILSPY: ToolSpec = {
+  bin: "ilspycmd",
+  name: "ilspycmd",
+  license: "MIT",
+  unlocks: ".NET assembly decompilation to C# source",
+  extraDirs: ["~/.dotnet/tools"],
+  install: {
+    darwin: "brew install dotnet && dotnet tool install -g ilspycmd",
+    linux: "install the .NET SDK (https://dotnet.microsoft.com/download), then: dotnet tool install -g ilspycmd",
+    win32: "install the .NET SDK (https://dotnet.microsoft.com/download), then: dotnet tool install -g ilspycmd",
+  },
+};
+
+/** Locate a tool on PATH or in its extra directories, without running it. */
+export function findTool(t: ToolSpec, env: NodeJS.ProcessEnv = process.env): string | null {
+  const found = which(t.bin, env);
+  if (found) return found;
+  const home = env.HOME ?? env.USERPROFILE ?? "";
+  for (const d of t.extraDirs ?? []) {
+    const dir = d.startsWith("~") ? join(home, d.slice(1)) : d;
+    const hit = which(t.bin, { ...env, PATH: dir });
+    if (hit) return hit;
+  }
+  return null;
+}
 
 /** Locate an executable on PATH without running it. */
 export function which(bin: string, env: NodeJS.ProcessEnv = process.env): string | null {

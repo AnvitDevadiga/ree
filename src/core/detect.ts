@@ -13,6 +13,7 @@
 import { open, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
+import { findCliHeader } from "../parsers/dotnet-metadata.js";
 
 export type DetectedKind =
   | "asar"
@@ -22,6 +23,7 @@ export type DetectedKind =
   | "elf"
   | "macho"
   | "pe"
+  | "dotnet"
   | "dmg"
   | "app-bundle"
   | "directory"
@@ -57,6 +59,7 @@ export const SUPPORTED_SUMMARY = [
   "ELF, Mach-O (incl. universal) and PE binaries (structure only)",
   "Android APK / AAB (manifest, DEX and bundled JS always; Java source with optional jadx)",
   "Java JAR / .class (bytecode structure always; Java source with optional Vineflower)",
+  ".NET assemblies (.dll/.exe metadata always; C# source with optional ilspycmd)",
   "macOS .dmg images (macOS only) and .app bundles / extracted app directories",
 ];
 
@@ -108,7 +111,10 @@ export function classify(head: Uint8Array, tail: Uint8Array, path = ""): Detecti
       return { kind: "java-class", label: "Java .class file", route: "parser" };
     }
   }
-  if (b.length >= 2 && b[0] === 0x4d && b[1] === 0x5a) return { kind: "pe", label: "PE (Windows) binary", route: "parser" };
+  if (b.length >= 2 && b[0] === 0x4d && b[1] === 0x5a) {
+    if (findCliHeader(b)) return { kind: "dotnet", label: ".NET assembly", route: "parser" };
+    return { kind: "pe", label: "PE (Windows) binary", route: "parser" };
+  }
 
   // UDIF disk image: 'koly' trailer 512 bytes from the end.
   if (tail.length >= 512 && String.fromCharCode(...tail.subarray(tail.length - 512, tail.length - 508)) === "koly") {

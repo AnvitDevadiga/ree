@@ -70,6 +70,20 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
     if (m.nestedJars) out.push(`${m.nestedJars} nested library JAR(s) were counted but not analyzed; extract one and run 'ree analyze' on it.`);
     if (m.classParseFailures) out.push(`${m.classParseFailures} class file(s) could not be parsed and are missing from the report.`);
   }
+  if (fmt === "dotnet") {
+    const m = model.meta as { decompiler?: string; ilspyInstall?: string; ilOnly?: boolean; generatedTypes?: number; pinvokes?: string[]; decompiledTypes?: number };
+    if (m.decompiler !== "ilspycmd") {
+      out.push(
+        `Method bodies (IL) were not decompiled — types, methods, parameters, fields and strings come from metadata only${m.ilspyInstall ? `: ilspycmd is not installed. Install it to unlock C# source: ${m.ilspyInstall}` : ""}.`,
+      );
+    } else {
+      out.push(`Decompiled with ilspycmd (${m.decompiledTypes ?? 0} source files); decompiled C# can differ from the original (async/LINQ/pattern-matching sugar especially).`);
+    }
+    if (m.ilOnly === false) out.push("This is a mixed-mode assembly: it contains native code, which REE does not analyze.");
+    if (m.generatedTypes) out.push(`${m.generatedTypes} compiler-generated types (closures, async state machines) were folded away rather than listed.`);
+    if (m.pinvokes?.length) out.push(`${m.pinvokes.length} P/Invoke import(s) call into native DLLs; the native side is not analyzed.`);
+    out.push("No type-level call graph is built from IL, so nothing is pruned; obfuscated or renamed members are reported as they appear.");
+  }
   if (fmt === "wasm") {
     out.push("WASM is decoded to a WAT-style listing; high-level types and names beyond the name section are not recovered.");
   }

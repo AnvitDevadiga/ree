@@ -236,6 +236,7 @@ Each pass exists because the one before it can't finish the job:
 | **ELF / Mach-O / PE** | Headers, sections, symbols, imports, exports, strings | — | safe default | symbol and import summary |
 | **Android APK / AAB** | Bounded ZIP + binary-manifest reader: package, components, permissions, DEX class counts, native libs; bundled React Native / Cordova JS fully analyzed. App classes decompiled to Java with the optional **jadx** | — | safe default | app classes (Java), bundled JS; libraries summarized |
 | **Java JAR / `.class`** | Bounded class-file reader: every class's superclass, interfaces, fields and method signatures, a constant-pool reference graph, `Main-Class` / `main()` entry points, fat-JAR libs counted. Source decompiled with the optional **Vineflower** | constant pool | safe default | Java source, or a structural summary per class |
+| **.NET assemblies** (`.dll`/`.exe`) | Bounded ECMA-335 metadata reader: assembly identity, dependencies, every type with base type, fields, methods with parameter names, P/Invoke imports, entry point, string literals. C# decompiled with the optional **ilspycmd** | inheritance only | safe default | C# source, or a metadata summary per type |
 | **`.dmg` / `.app`** | Read-only mount, bundle walk, routes inner artifacts | per artifact | per artifact | one report per artifact |
 
 ## ⌨️ CLI
