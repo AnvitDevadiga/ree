@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { analyze } from "../src/core/analyze.js";
 import { buildNativeFixture, NATIVE_TRUTH } from "../benchmarks/fixtures/native.js";
+import { findGhidra as require_findGhidra } from "../src/tools/ghidra.js";
 
 const BIN = buildNativeFixture(); // null without a C compiler
 const skip = (!BIN && "needs a C compiler (npm run fixtures:native)") || (process.platform === "win32" && "shell-script fake tool");
@@ -89,5 +90,18 @@ test("ghidra (absent): structure only, with the install command", { skip: !BIN &
     const r = await analyze(BIN!);
     assert.ok(r.report.model.units.some((u) => u.name === "_checksum"));
     assert.ok(r.limitations.some((l) => /Install Ghidra/.test(l)));
+  });
+});
+
+test("ghidra (real): ground-truth C binary — every function decompiled, exact call graph", { skip: (!BIN || !require_findGhidra()) && "needs a C compiler and Ghidra (brew install ghidra)" }, async () => {
+  await withEnv({ REE_DISABLE_GHIDRA: undefined, GHIDRA_INSTALL_DIR: undefined }, async () => {
+    const r = await analyze(BIN!);
+    const m = r.report.model;
+    assert.equal((m.meta as { decompiler: string }).decompiler, "ghidra", m.warnings.join(" | "));
+    const byName = new Map(m.units.map((u) => [u.name.replace(/^_/, ""), u] as const));
+    for (const f of NATIVE_TRUTH.functions) assert.ok(byName.get(f)?.body, `${f} has C`);
+    for (const [caller, callees] of Object.entries(NATIVE_TRUTH.calls)) {
+      for (const c of callees) assert.ok(byName.get(caller)!.references.includes(byName.get(c)!.id), `${caller} -> ${c}`);
+    }
   });
 });

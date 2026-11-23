@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-23T06:14:08.987Z",
+  "generated": "2026-11-23T06:22:45.782Z",
   "pythons": [
     "3.8",
     "3.10",
@@ -11,7 +11,7 @@
     {
       "name": "pycdc",
       "license": "GPL-3.0",
-      "installed": false
+      "installed": true
     },
     {
       "name": "decompyle3",
@@ -30,11 +30,10 @@
       "module": "colorsys",
       "decompiler": "pycdc",
       "cell": {
-        "produced": false,
-        "compiles": false,
-        "functions": "-",
-        "behavior": "-",
-        "note": "not installed"
+        "produced": true,
+        "compiles": true,
+        "functions": "6/6",
+        "behavior": "1/6"
       }
     },
     {
@@ -65,11 +64,10 @@
       "module": "ree_sample",
       "decompiler": "pycdc",
       "cell": {
-        "produced": false,
+        "produced": true,
         "compiles": false,
-        "functions": "-",
-        "behavior": "-",
-        "note": "not installed"
+        "functions": "8/8",
+        "behavior": "-"
       }
     },
     {
@@ -100,11 +98,10 @@
       "module": "colorsys",
       "decompiler": "pycdc",
       "cell": {
-        "produced": false,
-        "compiles": false,
-        "functions": "-",
-        "behavior": "-",
-        "note": "not installed"
+        "produced": true,
+        "compiles": true,
+        "functions": "6/6",
+        "behavior": "1/6"
       }
     },
     {
@@ -136,11 +133,11 @@
       "module": "ree_sample",
       "decompiler": "pycdc",
       "cell": {
-        "produced": false,
+        "produced": true,
         "compiles": false,
-        "functions": "-",
+        "functions": "7/8",
         "behavior": "-",
-        "note": "not installed"
+        "note": "raise ValueError('qty must be positive')"
       }
     },
     {
@@ -172,11 +169,10 @@
       "module": "colorsys",
       "decompiler": "pycdc",
       "cell": {
-        "produced": false,
-        "compiles": false,
-        "functions": "-",
-        "behavior": "-",
-        "note": "not installed"
+        "produced": true,
+        "compiles": true,
+        "functions": "6/6",
+        "behavior": "1/6"
       }
     },
     {
@@ -208,11 +204,10 @@
       "module": "ree_sample",
       "decompiler": "pycdc",
       "cell": {
-        "produced": false,
+        "produced": true,
         "compiles": false,
-        "functions": "-",
-        "behavior": "-",
-        "note": "not installed"
+        "functions": "8/8",
+        "behavior": "-"
       }
     },
     {
@@ -247,8 +242,7 @@
         "produced": false,
         "compiles": false,
         "functions": "-",
-        "behavior": "-",
-        "note": "not installed"
+        "behavior": "-"
       }
     },
     {
@@ -283,8 +277,7 @@
         "produced": false,
         "compiles": false,
         "functions": "-",
-        "behavior": "-",
-        "note": "not installed"
+        "behavior": "-"
       }
     },
     {
@@ -320,7 +313,7 @@
         "compiles": false,
         "functions": "-",
         "behavior": "-",
-        "note": "not installed"
+        "note": "Bad MAGIC!"
       }
     },
     {
@@ -356,7 +349,7 @@
         "compiles": false,
         "functions": "-",
         "behavior": "-",
-        "note": "not installed"
+        "note": "Bad MAGIC!"
       }
     },
     {

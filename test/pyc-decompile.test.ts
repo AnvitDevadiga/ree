@@ -91,3 +91,25 @@ test("pyc: decompiled source is untrusted — injected text is cleaned", { skip:
     assert.match(text, /join\(rows\)/);
   });
 });
+
+test("pyc: output with no functions (decompiler stopped early) counts as a failure", { skip: posixOnly }, async () => {
+  const bin = mkdtempSync(join(tmpdir(), "ree-fakepy-"));
+  writeFileSync(join(bin, "pycdc"), "#!/bin/sh\necho 'Unsupported opcode: MAKE_FUNCTION (122)' >&2\nprintf 'ONE_THIRD = 0.333333\\n# WARNING: Decompyle incomplete\\n'\n");
+  chmodSync(join(bin, "pycdc"), 0o755);
+  await withEnv({ PATH: `${bin}:${process.env.PATH}`, REE_DISABLE_PYDECOMPILE: undefined }, async () => {
+    const r = await analyze(fixture("inventory-cli", "clean").path.replace(/inventory\.clean\.js$/, "tool.pyc"));
+    const m = r.report.model;
+    assert.equal((m.meta as { decompiler: string }).decompiler, "none");
+    assert.ok(m.warnings.some((w) => /recovered no functions.*MAKE_FUNCTION/.test(w)), m.warnings.join(" | "));
+  });
+});
+
+test("pyc (real pycdc, Python 3.12): functions recovered, with the float-precision caveat", { skip: (!existsSync(join(CACHE, "py3.12", "colorsys.pyc")) || !existsSync(join(import.meta.dirname, "..", "benchmarks", "fixtures", ".cache", "tools", "pycdc-build", "pycdc"))) && "needs pycdc built in the cache and the 3.12 corpus" }, async () => {
+  const pycdcDir = join(import.meta.dirname, "..", "benchmarks", "fixtures", ".cache", "tools", "pycdc-build");
+  await withEnv({ PATH: `${pycdcDir}:${process.env.PATH}`, REE_DISABLE_PYDECOMPILE: undefined }, async () => {
+    const r = await analyze(join(CACHE, "py3.12", "colorsys.pyc"));
+    assert.equal((r.report.model.meta as { decompiler: string }).decompiler, "pycdc");
+    assert.match(r.report.model.units.find((u) => u.name === "<module>.rgb_to_hsv")?.body ?? "", /def rgb_to_hsv\(/);
+    assert.ok(r.limitations.some((l) => /truncates float literals/.test(l)));
+  });
+});

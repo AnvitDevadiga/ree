@@ -8,9 +8,10 @@
  * function to C and writes one JSON line per function. Everything it returns
  * is untrusted and goes through the cleaning engine.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
+import { platform } from "node:os";
 import { findTool, runTool, safeInputPath, type ToolSpec } from "./external.js";
 
 export const GHIDRA: ToolSpec = {
@@ -35,6 +36,30 @@ export function findGhidra(env: NodeJS.ProcessEnv = process.env): string | null 
     }
   }
   return findTool(GHIDRA, env);
+}
+
+/**
+ * Environment for Ghidra's launcher. It uses the first `java` on PATH — on macOS
+ * often the /usr/bin/java stub with no runtime behind it — so put a real JDK
+ * first: the user's JAVA_HOME if set, else a standard install (Ghidra 12 needs
+ * Java 21+). Only the Ghidra child process sees this.
+ */
+export function ghidraEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const hasJava = (home: string) => existsSync(join(home, "bin", platform() === "win32" ? "java.exe" : "java"));
+  let home = env.JAVA_HOME && hasJava(env.JAVA_HOME) ? env.JAVA_HOME : undefined;
+  if (!home) {
+    const candidates = ["/opt/homebrew/opt/openjdk@25", "/opt/homebrew/opt/openjdk@21", "/opt/homebrew/opt/openjdk", "/usr/local/opt/openjdk@21", "/usr/local/opt/openjdk"];
+    for (const root of ["/Library/Java/JavaVirtualMachines", "/usr/lib/jvm"]) {
+      try {
+        for (const d of readdirSync(root).sort().reverse()) candidates.push(join(root, d, root.startsWith("/Library") ? "Contents/Home" : ""));
+      } catch {
+        /* not present */
+      }
+    }
+    home = candidates.find(hasJava);
+  }
+  if (!home) return {};
+  return { JAVA_HOME: home, PATH: `${join(home, "bin")}${delimiter}${env.PATH ?? ""}` };
 }
 
 /** Ghidra post-script: decompile every function, one JSON object per line. */
@@ -139,7 +164,7 @@ export async function decompileWithGhidra(
     const out = join(work, "functions.jsonl");
     for (const d of [scripts, project]) mkdirSync(d, { recursive: true });
     writeFileSync(join(scripts, "ReeExport.java"), EXPORT_SCRIPT);
-    await runTool(
+    const run = await runTool(
       tool,
       [
         project, "ree",
@@ -149,9 +174,12 @@ export async function decompileWithGhidra(
         "-deleteProject",
         "-analysisTimeoutPerFile", String(Math.max(60, Math.floor(o.timeoutMs / 1000) - 30)),
       ],
-      { cwd: work, timeoutMs: Number(process.env.REE_GHIDRA_TIMEOUT_MS) || o.timeoutMs, maxOutputBytes: 16 * 1024 * 1024 },
+      { cwd: work, timeoutMs: Number(process.env.REE_GHIDRA_TIMEOUT_MS) || o.timeoutMs, maxOutputBytes: 16 * 1024 * 1024, env: ghidraEnv() },
     );
-    if (!existsSync(out)) throw new Error("Ghidra produced no output (the binary may not have been imported)");
+    if (!existsSync(out)) {
+      const reason = `${run.stderr}\n${run.stdout}`.split("\n").map((l) => l.trim()).find((l) => /ERROR|Unable|Exception|not found/i.test(l));
+      throw new Error(`Ghidra produced no output (exit ${run.code}${reason ? `: ${reason.slice(0, 200)}` : ""})`);
+    }
     if (statSync(out).size > o.maxOutputChars * 2) throw new Error("Ghidra output exceeds the size limit");
     const functions: GhidraFunction[] = [];
     let rejected = 0;

@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ArtifactModel, CodeUnit, EntryPoint, ExtractedString, Parser, ParserInput } from "../core/types.js";
 import { findCliHeader, readDotnetMetadata, type DotnetType } from "./dotnet-metadata.js";
-import { ILSPY, findTool, installHint, runTool, safeInputPath } from "../tools/external.js";
+import { ILSPY, findTool, installHint, runTool, safeInputPath, toolError, dotnetToolEnv } from "../tools/external.js";
 
 export interface DotnetLimits {
   decompileTimeoutMs: number;
@@ -138,7 +138,7 @@ export class DotnetParser implements Parser {
         entryPoint: md.entryPoint ? `${md.entryPoint.type}.${md.entryPoint.method}` : undefined,
         decompiler: decompiled ? "ilspycmd" : "none",
         decompiledTypes: decompiled,
-        ...(decompiled || decompileFailed ? {} : { ilspyInstall: installHint(ILSPY) }),
+        ...(decompiled ? {} : decompileFailed ? { decompileFailed: true } : { ilspyInstall: installHint(ILSPY) }),
       },
     };
   }
@@ -146,16 +146,24 @@ export class DotnetParser implements Parser {
   private async decompile(tool: string, path: string, units: CodeUnit[], idOf: Map<string, string>, warnings: string[]) {
     const work = mkdtempSync(join(tmpdir(), "ree-ilspy-"));
     try {
+      let run: { stdout: string; stderr: string; code: number };
       try {
-        await runTool(tool, ["-p", "-o", work, safeInputPath(path)], {
+        run = await runTool(tool, ["-p", "-o", work, safeInputPath(path)], {
           cwd: work,
           timeoutMs: Number(process.env.REE_ILSPY_TIMEOUT_MS) || this.limits.decompileTimeoutMs,
+          env: dotnetToolEnv(),
+          maxOutputBytes: 16 * 1024 * 1024,
         });
       } catch (e) {
         warnings.push(`ilspycmd failed: ${(e as Error).message}; falling back to metadata structure`);
         return { decompiled: 0, failed: true };
       }
       const byId = new Map(units.map((u) => [u.id, u] as const));
+      const byArityless = new Map<string, string>();
+      for (const [name, id] of idOf) {
+        const plain = name.replace(/`\d+/g, "");
+        if (plain !== name && !idOf.has(plain) && !byArityless.has(plain)) byArityless.set(plain, id);
+      }
       let total = 0;
       let decompiled = 0;
       const walk = (dir: string, depth: number) => {
@@ -184,7 +192,8 @@ export class DotnetParser implements Parser {
           // Type name from the namespace declaration + file name, not the path.
           const ns = /^\s*namespace\s+([\w.]+)\s*[;{]?/m.exec(body)?.[1];
           const fullName = (ns ? ns + "." : "") + n.slice(0, -3).replace(/`\d+$/, "");
-          const u = byId.get(idOf.get(fullName) ?? "");
+          // Generic types carry their arity in metadata (Foo`2) but not in file names.
+          const u = byId.get(idOf.get(fullName) ?? byArityless.get(fullName) ?? "");
           if (!u || u.body) continue;
           u.body = body;
           u.meta = { ...u.meta, decompiler: "ilspycmd" };
@@ -192,6 +201,10 @@ export class DotnetParser implements Parser {
         }
       };
       walk(work, 0);
+      if (decompiled === 0) {
+        warnings.push(`ilspycmd ran but produced no C# source (${toolError(run)}); falling back to metadata structure`);
+        return { decompiled: 0, failed: true };
+      }
       // Nested types live inside their outer type's file.
       const withSource = new Set(units.filter((u) => u.body).map((u) => u.name));
       for (let i = units.length - 1; i >= 0; i--) {

@@ -131,3 +131,21 @@ test("dotnet: corrupt metadata in a real assembly is reported, not a crash", { s
   assert.equal(m.units.length, 0);
   assert.ok(m.warnings.some((w) => /metadata could not be read: .*BSJB/.test(w)), m.warnings.join(" | "));
 });
+
+test("dotnet (real ilspycmd): Newtonsoft.Json decompiles to C# for nearly every type", { skip: (noDll || !findTool(ILSPY)) && "needs Newtonsoft.Json and ilspycmd (dotnet tool install -g ilspycmd)" }, async () => {
+  await withEnv({ REE_DISABLE_ILSPY: undefined }, async () => {
+    const r = await analyze(DLL);
+    const m = r.report.model;
+    const meta = m.meta as { decompiler: string };
+    if (meta.decompiler !== "ilspycmd") {
+      // Installed but unable to run (e.g. no .NET runtime found) must be reported, not hidden.
+      assert.ok(m.warnings.some((w) => /ilspycmd/.test(w)), "a failure is explained in warnings");
+      return;
+    }
+    const withSource = m.units.filter((u) => u.body).length;
+    assert.ok(withSource >= m.units.length - 10, `${withSource}/${m.units.length} types have C#`);
+    const jc = m.units.find((u) => u.name === "Newtonsoft.Json.JsonConvert")!;
+    assert.match(jc.body ?? "", /public static string SerializeObject\(object\?? value, Formatting formatting\)/);
+    assert.ok(m.units.find((u) => u.name === "Newtonsoft.Json.Utilities.BidirectionalDictionary`2")?.body, "generic type mapped to its file");
+  });
+});

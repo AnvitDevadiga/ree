@@ -22,7 +22,7 @@ import type { ArtifactModel, CodeUnit, EntryPoint, ExtractedString, Parser, Pars
 import { classify } from "../core/detect.js";
 import { ZipReader } from "./zip.js";
 import { parseClassFile, prettyDescriptor, javaVersion, type ClassInfo } from "./classfile.js";
-import { VINEFLOWER, installHint, runTool, safeInputPath, which } from "../tools/external.js";
+import { VINEFLOWER, installHint, runTool, safeInputPath, toolError, which } from "../tools/external.js";
 
 export interface JarLimits {
   maxClasses: number;
@@ -200,7 +200,7 @@ export class JarParser implements Parser {
         nestedJars: nestedJars.length,
         decompiler: decompiled ? "vineflower" : "none",
         decompiledClasses: decompiled,
-        ...(decompiled || decompileFailed ? {} : { vineflowerInstall: installHint(VINEFLOWER) }),
+        ...(decompiled ? {} : decompileFailed ? { decompileFailed: true } : { vineflowerInstall: installHint(VINEFLOWER) }),
       },
     };
   }
@@ -222,8 +222,9 @@ export class JarParser implements Parser {
         src = join(work, "Input.class");
         writeFileSync(src, readFileSync(inputPath));
       }
+      let run: { stdout: string; stderr: string; code: number };
       try {
-        await runTool(vfPath, ["--log-level=error", src, out], {
+        run = await runTool(vfPath, ["--log-level=error", src, out], {
           cwd: work,
           timeoutMs: Number(process.env.REE_VINEFLOWER_TIMEOUT_MS) || this.limits.decompileTimeoutMs,
         });
@@ -268,6 +269,10 @@ export class JarParser implements Parser {
         }
       };
       walk(out, 0);
+      if (decompiled === 0) {
+        warnings.push(`Vineflower ran but produced no Java source (${toolError(run)}); falling back to bytecode structure`);
+        return { decompiled: 0, failed: true };
+      }
       // Inner classes are inside their outer class's source now; drop their
       // separate structural units when the outer one was decompiled.
       const decompiledNames = new Set(units.filter((u) => u.body).map((u) => u.name));

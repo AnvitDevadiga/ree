@@ -40,6 +40,16 @@ async function enrichWithDecompiler(model: ArtifactModel, path: string): Promise
     };
   }
   const { blocks, module } = splitTopLevel(result.source);
+  // Output with no function or class at all, from a module that has them, is a
+  // failed decompile (e.g. pycdc stopping at the first MAKE_FUNCTION), not a result.
+  const hasFunctions = model.units.some((u) => /^<module>\.[^.]+$/.test(u.name));
+  if (blocks.size === 0 && hasFunctions) {
+    return {
+      ...model,
+      warnings: [...model.warnings, `${result.tool} recovered no functions or classes${result.problem ? ` (${result.problem})` : ""}; structure-only analysis kept`],
+      meta: { ...model.meta, decompiler: "none", decompileFailed: result.tool, decompileHint: pyDecompileHint(magic) },
+    };
+  }
   const units = model.units.map((u) => ({ ...u, meta: { ...u.meta } }));
   let attached = 0;
   for (const u of units) {

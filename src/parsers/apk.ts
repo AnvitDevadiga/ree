@@ -21,7 +21,7 @@ import { classify } from "../core/detect.js";
 import { ZipReader, type ZipEntry } from "./zip.js";
 import { parseManifest, type ManifestInfo } from "./axml.js";
 import { parseJsSource } from "./js-bundle.js";
-import { JADX, installHint, runTool, safeInputPath, which } from "../tools/external.js";
+import { JADX, installHint, runTool, safeInputPath, toolError, which } from "../tools/external.js";
 
 export interface ApkLimits {
   jadxTimeoutMs: number;
@@ -153,7 +153,9 @@ export class ApkParser implements Parser {
               topLibraries: Object.entries(decompiled.libraries).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, v]) => `${k} (${v})`),
               decompileErrors: decompiled.errors,
             }
-          : { jadxInstall: installHint(JADX) }),
+          : jadxPath
+            ? { decompileFailed: true }
+            : { jadxInstall: installHint(JADX) }),
       },
     };
   }
@@ -198,11 +200,12 @@ export class ApkParser implements Parser {
     const out = mkdtempSync(join(tmpdir(), "ree-jadx-"));
     try {
       let errors = 0;
+      let run: { stdout: string; stderr: string; code: number } = { stdout: "", stderr: "", code: 0 };
       try {
-        const r = await runTool(jadxPath, ["-d", out, "--no-res", "--threads-count", "2", "--log-level", "error", safeInputPath(apkPath)], {
+        const r = (run = await runTool(jadxPath, ["-d", out, "--no-res", "--threads-count", "2", "--log-level", "error", safeInputPath(apkPath)], {
           cwd: out,
           timeoutMs: Number(process.env.REE_JADX_TIMEOUT_MS) || this.limits.jadxTimeoutMs,
-        });
+        }));
         errors = Number(/errors?,? count:\s*(\d+)/i.exec(r.stdout + r.stderr)?.[1] ?? (r.code !== 0 ? 1 : 0));
       } catch (e) {
         warnings.push(`jadx failed: ${(e as Error).message}; falling back to structure-only analysis`);
@@ -256,6 +259,10 @@ export class ApkParser implements Parser {
         }
       };
       walk(sourcesRoot, 0);
+      if (files === 0) {
+        warnings.push(`jadx ran but produced no Java source (${toolError(run)}); falling back to structure-only analysis`);
+        return undefined;
+      }
       if (files >= this.limits.maxJavaFiles) warnings.push(`[anti-exhaust] stopped after ${this.limits.maxJavaFiles} decompiled files`);
 
       // Name-based references between the app's own classes (over-approximate).

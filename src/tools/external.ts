@@ -66,6 +66,24 @@ export const ILSPY: ToolSpec = {
   },
 };
 
+/**
+ * Environment for running a .NET global tool. Homebrew and other installs put
+ * the runtime outside the default location, so DOTNET_ROOT is set when unset
+ * and a standard install exists; roll-forward lets a tool built for an older
+ * .NET run on a newer one. The user's own settings always win.
+ */
+export function dotnetToolEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  if (!env.DOTNET_ROOT) {
+    const home = env.HOME ?? env.USERPROFILE ?? "";
+    const candidates = ["/opt/homebrew/opt/dotnet/libexec", "/usr/local/opt/dotnet/libexec", "/usr/local/share/dotnet", "/usr/share/dotnet", "/usr/lib/dotnet", join(home, ".dotnet")];
+    const root = candidates.find((d) => existsSync(join(d, platform() === "win32" ? "dotnet.exe" : "dotnet")));
+    if (root) out.DOTNET_ROOT = root;
+  }
+  if (!env.DOTNET_ROLL_FORWARD) out.DOTNET_ROLL_FORWARD = "Major";
+  return out;
+}
+
 /** Locate a tool on PATH or in its extra directories, without running it. */
 export function findTool(t: ToolSpec, env: NodeJS.ProcessEnv = process.env): string | null {
   const found = which(t.bin, env);
@@ -105,6 +123,8 @@ export class ToolError extends Error {}
 export interface RunOptions {
   cwd: string;
   timeoutMs: number;
+  /** Extra environment for the child process (merged over process.env). */
+  env?: NodeJS.ProcessEnv;
   /** Cap on captured stdout+stderr bytes. */
   maxOutputBytes?: number;
 }
@@ -116,7 +136,7 @@ export function runTool(binPath: string, args: string[], o: RunOptions): Promise
     execFile(
       binPath,
       args,
-      { cwd: o.cwd, timeout: o.timeoutMs, killSignal: "SIGKILL", maxBuffer: o.maxOutputBytes ?? 4 * 1024 * 1024, windowsHide: true },
+      { cwd: o.cwd, env: o.env ? { ...process.env, ...o.env } : process.env, timeout: o.timeoutMs, killSignal: "SIGKILL", maxBuffer: o.maxOutputBytes ?? 4 * 1024 * 1024, windowsHide: true },
       (err, stdout, stderr) => {
         const e = err as (NodeJS.ErrnoException & { killed?: boolean; code?: number | string }) | null;
         if (e?.killed) return fail(new ToolError(`${binPath} exceeded its ${Math.round(o.timeoutMs / 1000)}s time limit`));
@@ -125,6 +145,12 @@ export function runTool(binPath: string, args: string[], o: RunOptions): Promise
       },
     );
   });
+}
+
+/** First meaningful line of a tool's error output, for warnings. */
+export function toolError(r: { stdout: string; stderr: string; code: number }): string {
+  const line = `${r.stderr}\n${r.stdout}`.split("\n").map((l) => l.trim()).find((l) => l && !/^(INFO|DEBUG)\b/.test(l));
+  return `exit ${r.code}${line ? `: ${line.slice(0, 200)}` : ""}`;
 }
 
 /** Absolute path for an input file, so it can never be parsed as a flag. */

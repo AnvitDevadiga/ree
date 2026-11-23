@@ -42,7 +42,7 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
     const m = model.meta as { decompiler?: string; decompileHint?: string; decompileFailed?: string; decompileIncomplete?: boolean; pythonVersion?: string };
     if (m.decompiler && m.decompiler !== "none") {
       out.push(
-        `Decompiled with ${m.decompiler}${m.decompileIncomplete ? " — some sections could not be decompiled and are marked in the source" : ""}. Python decompilers are often wrong in subtle ways (REE's own evaluation found broken generators and slices); verify against behavior before trusting it.`,
+        `Decompiled with ${m.decompiler}${m.decompileIncomplete ? " — some sections could not be decompiled and are marked in the source" : ""}. Python decompilers are often wrong in subtle ways — REE's own evaluation found broken generators and slices${m.decompiler === "pycdc" ? ", and pycdc truncates float literals to ~6 significant digits and can mangle default arguments, so numeric results may differ from the original" : ""}; verify against behavior before trusting it.`,
       );
     } else {
       out.push(
@@ -58,7 +58,9 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
     };
     if (m.decompiler !== "jadx") {
       out.push(
-        `Java/Kotlin code was not decompiled (${m.classDefs ?? 0} classes in DEX): jadx is not installed. Install it to unlock source-level analysis: ${m.jadxInstall ?? "see 'ree doctor'"}.`,
+        (model.meta as { decompileFailed?: boolean }).decompileFailed
+          ? `Java/Kotlin code was not decompiled (${m.classDefs ?? 0} classes in DEX): jadx was found but failed on this file — see the warnings.`
+          : `Java/Kotlin code was not decompiled (${m.classDefs ?? 0} classes in DEX): jadx is not installed. Install it to unlock source-level analysis: ${m.jadxInstall ?? "see 'ree doctor'"}.`,
       );
     } else {
       out.push(
@@ -76,7 +78,7 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
     const m = model.meta as { decompiler?: string; vineflowerInstall?: string; classes?: number; decompiledClasses?: number; nestedJars?: number; classParseFailures?: number };
     if (m.decompiler !== "vineflower") {
       out.push(
-        `Java bytecode was read for structure only (classes, fields, method signatures, references) — method bodies were not decompiled${m.vineflowerInstall ? `: Vineflower is not installed. Install it to unlock Java source: ${m.vineflowerInstall}` : ""}.`,
+        `Java bytecode was read for structure only (classes, fields, method signatures, references) — method bodies were not decompiled${m.vineflowerInstall ? `: Vineflower is not installed. Install it to unlock Java source: ${m.vineflowerInstall}` : (model.meta as { decompileFailed?: boolean }).decompileFailed ? ": Vineflower was found but failed on this file — see the warnings" : ""}.`,
       );
     } else {
       out.push(`Decompiled with Vineflower (${m.decompiledClasses ?? 0} source files); decompiler output can be inexact, and generics or lambdas may not match the original source exactly.`);
@@ -89,7 +91,7 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
     const m = model.meta as { decompiler?: string; ilspyInstall?: string; ilOnly?: boolean; generatedTypes?: number; pinvokes?: string[]; decompiledTypes?: number };
     if (m.decompiler !== "ilspycmd") {
       out.push(
-        `Method bodies (IL) were not decompiled — types, methods, parameters, fields and strings come from metadata only${m.ilspyInstall ? `: ilspycmd is not installed. Install it to unlock C# source: ${m.ilspyInstall}` : ""}.`,
+        `Method bodies (IL) were not decompiled — types, methods, parameters, fields and strings come from metadata only${m.ilspyInstall ? `: ilspycmd is not installed. Install it to unlock C# source: ${m.ilspyInstall}` : (model.meta as { decompileFailed?: boolean }).decompileFailed ? ": ilspycmd was found but failed on this file — see the warnings" : ""}.`,
       );
     } else {
       out.push(`Decompiled with ilspycmd (${m.decompiledTypes ?? 0} source files); decompiled C# can differ from the original (async/LINQ/pattern-matching sugar especially).`);
