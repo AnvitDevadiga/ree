@@ -69,14 +69,16 @@ Measured against the **real published `bla-agents@3.3.2`** at its worst-case set
 
 | Target | Tokens an agent would read | After REE | Reduction | Decoy units removed | Injection leaks |
 |---|---:|---:|:---:|---:|:---:|
-| **Electron app** (`.asar`) | 300,845 | 30,171 | **90%** | 4,000 | **0** ✅ |
+| **Electron app** (`.asar`) | 301,053 | 60,000² | **80.1%** | 4,560 | **0** ✅ |
 | **Webpack bundle** | 35,521 | 2,902 | **91.8%** | — | **0** ✅ |
-| **Node CLI** (JS) | 37,442 | 12,787 | **65.8%** | 94 | **0** ✅ |
+| **Node CLI** (JS) | 37,442 | 21,835 | **41.7%** | 94 | **0** ✅ |
 | **WASM module** | 38¹ | 38 | — | — | **0** ✅ |
 
 **Zero injection markers reach a context slice in any format** — no `<system-reminder>`, ChatML frame, fake `Human:`/`Assistant:` turn, or alignment canary. `bench:real` fails the build if a single one leaks.
 
-<sub>¹ REE's WASM parser discards the inflated custom sections at parse time, so the 6.8 MB hardened module is already down to its real code before the engine runs.</sub>
+<sub>¹ REE's WASM parser discards the inflated custom sections at parse time, so the 6.8 MB hardened module is already down to its real code before the engine runs.<br>
+² Hits the default 60k-token context budget; every unit containing the app's real Electron logic is inside it.<br>
+**Why these are lower than earlier versions of this table (90% / 65.8%):** earlier REE versions quarantined whole top-level units that mixed BLA's generated statements with the app's real wiring, so real code (e.g. the CLI's `process.argv` entry, Electron's `BrowserWindow` setup) was discarded and counted as "reduction". REE now splits those units at statement level and keeps the real code. A smaller honest number beats a larger one that throws code away.</sub>
 
 <details>
 <summary><b>Synthetic regression fixtures</b> (REE's own BLA simulator — fast, but not the number that matters)</summary>

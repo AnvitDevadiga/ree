@@ -19,6 +19,7 @@
  */
 import { DEFAULT_LIMITS, type ArtifactModel, type CodeUnit, type EntryPoint, type ExtractedString, type Parser, type ParserInput } from "../core/types.js";
 import { ByteReader } from "./reader.js";
+import { parseJsSource } from "./js-bundle.js";
 
 interface AsarNode {
   offset?: string;
@@ -123,6 +124,8 @@ export class AsarParser implements Parser {
     if (sourceMaps) warnings.push(`${sourceMaps} source map(s) present and excluded from analysis (source maps may be decoys)`);
 
     resolveReferences(units);
+    const split = splitLargeJsFiles(units);
+    if (split) warnings.push(`split ${split} large JS file(s) into function-level units for slicing`);
     for (const u of units) if (u.body) collectStrings(u.body, u.id, strings);
 
     return {
@@ -136,6 +139,57 @@ export class AsarParser implements Parser {
       meta: { entryCount: units.length, maxDepth: maxDepthSeen, graphComplete: true, electron: isElectronApp(units) },
     };
   }
+}
+
+// ---------------------------------------------------------------------------
+// function-level splitting of large JS files
+// ---------------------------------------------------------------------------
+/** Files smaller than this stay one unit; splitting tiny files only adds noise. */
+const SPLIT_MIN_CHARS = 1500;
+/** Cap on child units created per file and per archive (hostile-input bound). */
+const SPLIT_MAX_CHILDREN = 2000;
+const SPLIT_MAX_TOTAL = 50_000;
+
+/**
+ * A large JS file inside an archive is otherwise one opaque unit, so a model gets
+ * the whole file as a single slice. Re-parse it with the JS parser and replace
+ * its body with function-level child units. The file unit stays in the graph as
+ * the parent: it keeps its require edges (the file graph is unchanged) and links
+ * to every child, so nothing inside a reachable file is pruned that wasn't before.
+ */
+function splitLargeJsFiles(units: CodeUnit[]): number {
+  let files = 0;
+  let total = 0;
+  const added: CodeUnit[] = [];
+  for (const u of units) {
+    if (!u.body || u.body.length < SPLIT_MIN_CHARS || !/\.(js|cjs|mjs|jsx)$/i.test(u.name)) continue;
+    let sub: ArtifactModel;
+    try {
+      sub = parseJsSource(u.body, u.name, u.body.length);
+    } catch {
+      continue;
+    }
+    if (sub.units.length < 3 || sub.units.length > SPLIT_MAX_CHILDREN || total + sub.units.length > SPLIT_MAX_TOTAL) continue;
+    const idOf = (cid: string) => `${u.id}/${cid}`;
+    const local = new Set(sub.units.map((c) => c.id));
+    for (const c of sub.units) {
+      added.push({
+        ...c,
+        id: idOf(c.id),
+        name: `${u.name}#${c.name}`,
+        references: c.references.filter((r) => local.has(r)).map(idOf),
+        meta: { ...c.meta, code: true, parent: u.id, refToken: undefined },
+      });
+    }
+    u.references = [...new Set([...u.references, ...sub.units.map((c) => idOf(c.id))])];
+    u.meta = { ...u.meta, splitInto: sub.units.length };
+    u.body = undefined;
+    u.kind = "module";
+    files++;
+    total += sub.units.length;
+  }
+  units.push(...added);
+  return files;
 }
 
 // ---------------------------------------------------------------------------

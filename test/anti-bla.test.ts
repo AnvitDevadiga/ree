@@ -227,3 +227,27 @@ test("engine: input model is not mutated", async () => {
   runAntiBla(model);
   assert.equal(JSON.stringify(model.units.map((u) => [u.id, u.body?.length, u.references.length])), before);
 });
+
+test("engine: real wiring next to large generated statements survives (statement grouping)", async () => {
+  // Mirrors real bla-agents output: tens of KB of generated, high-entropy
+  // statements parked beside a few real top-level wiring lines. As one unit the
+  // aggregate tripped the packed-data check and the real lines were lost.
+  let seed = 5;
+  const rand = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32);
+  const b64 = (n: number) => Buffer.from(Array.from({ length: n }, () => Math.floor(rand() * 256))).toString("base64");
+  // Many short (<400-char) packed literals, so per-literal elision can't catch them.
+  const junk = (n: number) => `const sink_${b64(3).replace(/\W/g, "")} = [${Array.from({ length: n }, () => `"${b64(48)}"`).join(",")}];`;
+  const src = [
+    junk(300),
+    'const { app, BrowserWindow } = require("electron");',
+    "function createWindow() { return new BrowserWindow({ width: 800 }); }",
+    junk(300),
+    "app.whenReady().then(createWindow);",
+    junk(300),
+  ].join("\n");
+  const report = runAntiBla(await ingest(writeTemp("wired.js", src)));
+  const text = report.model.units.map((u) => u.body ?? "").join("\n");
+  assert.match(text, /require\("electron"\)/, "real require kept");
+  assert.match(text, /app\.whenReady\(\)\.then\(createWindow\)/, "real wiring kept");
+  assert.ok(report.model.units.some((u) => u.name === "createWindow"));
+});

@@ -43,7 +43,9 @@ export function parseJsSource(src: string, path: string, byteLength: number): Ar
 
   const registry = findModuleRegistry(ast);
   const model =
-    registry.length > 0 ? buildRegistryModel(ast, src, registry) : buildFlatModel(ast, src, comments);
+    registry.length > 0
+      ? buildRegistryModel(ast, src, registry)
+      : (buildFlatModel(ast, src, comments) ?? buildWrappedModel(ast, src, warnings));
   if (!model) return flatFallback(path, byteLength, src, warnings);
 
   const strings: ExtractedString[] = [];
@@ -253,31 +255,239 @@ function buildFlatModel(ast: AnyNode, src: string, comments: acorn.Comment[] = [
 
   const entryPoints: EntryPoint[] = [];
   if (topLevelParts.length > 0) {
-    const parts = topLevelParts.map((n) => src.slice(leadingStart(n), n.end));
     // File-level comments not attached to any statement (e.g. a trailing
-    // sourceMappingURL) belong to the top-level unit so they get sanitized too.
+    // sourceMappingURL) belong to the first top-level unit so they get sanitized too.
+    const stray: string[] = [];
     for (const c of comments) {
       const insideUnit = units.some((u) => c.start >= (u.offset ?? 0) && c.end <= (u.offset ?? 0) + (u.size ?? 0));
       const insideTop = topLevelParts.some((n) => c.start >= n.start && c.end <= n.end);
-      if (!claimedComments.has(c) && !insideUnit && !insideTop) parts.push(src.slice(c.start, c.end));
+      if (!claimedComments.has(c) && !insideUnit && !insideTop) stray.push(src.slice(c.start, c.end));
     }
-    const top: CodeUnit = {
-      id: "top:0",
-      name: "<top-level>",
-      kind: "module",
-      body: parts.join("\n"),
-      offset: topLevelParts[0]!.start,
-      size: topLevelParts.reduce((s, n) => s + (n.end - n.start), 0),
-      references: resolveIdentifierRefs(topLevelParts, byName, "top:0"),
-      meta: { synthetic: true },
-    };
-    units.unshift(top);
-    entryPoints.push({ unitId: top.id, reason: "main", detail: "top-level statements" });
+    const groups = groupStatements(topLevelParts, src, leadingStart);
+    const tops: CodeUnit[] = groups.map((group, i) => {
+      const id = `top:${i}`;
+      const parts = group.map((n) => src.slice(leadingStart(n), n.end));
+      if (i === 0) parts.push(...stray);
+      return {
+        id,
+        name: i === 0 ? "<top-level>" : `<top-level>#${i + 1}`,
+        kind: "module",
+        body: parts.join("\n"),
+        offset: group[0]!.start,
+        size: group.reduce((t, n) => t + (n.end - n.start), 0),
+        references: resolveIdentifierRefs(group, byName, id),
+        meta: { synthetic: true, ...(groups.length > 1 ? { group: i + 1, groups: groups.length } : {}) },
+      };
+    });
+    units.unshift(...tops);
+    for (const t of tops) entryPoints.push({ unitId: t.id, reason: "main", detail: "top-level statements" });
   }
   for (const u of units) {
     if ((u.meta as { exported?: boolean }).exported) entryPoints.push({ unitId: u.id, reason: "export", detail: u.name });
   }
   return { units, entryPoints };
+}
+
+// ---------------------------------------------------------------------------
+// Statement grouping for large leftover units
+// ---------------------------------------------------------------------------
+/** Leftover units at or below this size stay one unit (unchanged behavior). */
+const LEFTOVER_SPLIT_CHARS = 8000;
+/** A statement at least this large becomes its own group. */
+const LARGE_STATEMENT_CHARS = 1500;
+/** Cap on groups produced from one leftover unit. */
+const MAX_LEFTOVER_GROUPS = 500;
+
+/**
+ * Split a large run of non-declaration statements into groups: each large
+ * statement alone, consecutive small statements together. Hardened bundles park
+ * tens of KB of generated statements beside an app's few real wiring lines; as
+ * one unit the aggregate looks packed and the real lines get quarantined with
+ * it. As groups, every cleaning pass judges each piece on its own.
+ */
+function groupStatements(nodes: AnyNode[], src: string, startOf: (n: AnyNode) => number = (n) => n.start): AnyNode[][] {
+  const total = nodes.reduce((t, n) => t + (n.end - startOf(n)), 0);
+  if (total <= LEFTOVER_SPLIT_CHARS || nodes.length < 2) return [nodes];
+  const groups: AnyNode[][] = [];
+  let cur: AnyNode[] = [];
+  let curSize = 0;
+  const flush = () => {
+    if (cur.length) groups.push(cur);
+    cur = [];
+    curSize = 0;
+  };
+  for (const n of nodes) {
+    const size = n.end - startOf(n);
+    if (size >= LARGE_STATEMENT_CHARS) {
+      flush();
+      groups.push([n]);
+      continue;
+    }
+    if (curSize + size > LARGE_STATEMENT_CHARS) flush();
+    cur.push(n);
+    curSize += size;
+  }
+  flush();
+  if (groups.length > MAX_LEFTOVER_GROUPS) return [nodes];
+  return groups;
+}
+
+// ---------------------------------------------------------------------------
+// Wrapped bundles (IIFE / UMD / esbuild & rollup per-module wrappers)
+// ---------------------------------------------------------------------------
+/** Hard cap on how many wrapper levels are unwrapped (hostile-input bound). */
+const MAX_WRAP_DEPTH = 8;
+/** Hard cap on units recovered from wrappers. */
+const MAX_WRAPPED_UNITS = 20_000;
+
+/**
+ * Bundlers hide every declaration inside a wrapper, so the flat model sees
+ * nothing at the top level and the whole bundle used to become one opaque
+ * chunk. This descends into wrapper function bodies — the IIFE callee, a UMD
+ * factory argument, esbuild/rollup `__commonJS({ "path"(exports, module) {...} })`
+ * module objects — and recovers declarations inside them as units. Statements
+ * that are not declarations are grouped per scope into a synthetic unit, which
+ * is where execution starts for that module.
+ *
+ * It only runs when the flat model found no top-level declarations, so ordinary
+ * scripts and ES modules are modeled exactly as before.
+ */
+function buildWrappedModel(ast: AnyNode, src: string, warnings: string[]) {
+  const units: CodeUnit[] = [];
+  const entryPoints: EntryPoint[] = [];
+  const scopeParts: Array<{ label: string; nodes: AnyNode[] }> = [];
+  let counter = 0;
+  let depthCapped = false;
+
+  const pushUnit = (name: string, kind: CodeUnit["kind"], node: AnyNode, exported: boolean, scope: string) => {
+    if (units.length >= MAX_WRAPPED_UNITS) return;
+    units.push({
+      id: `fn:${counter++}`,
+      name,
+      kind,
+      body: src.slice(node.start, node.end),
+      offset: node.start,
+      size: node.end - node.start,
+      references: [],
+      meta: { exported, refToken: name, node, scope, wrapped: true },
+    });
+  };
+
+  const visitScope = (stmts: AnyNode[], label: string, depth: number) => {
+    if (depth > MAX_WRAP_DEPTH) {
+      depthCapped = true;
+      return;
+    }
+    const leftovers: AnyNode[] = [];
+    for (const stmt of stmts) {
+      const decl = declarationOf(stmt) ?? exportAssignmentOf(stmt, src);
+      if (decl) {
+        pushUnit(decl.name, decl.kind, decl.node, decl.exported, label);
+        continue;
+      }
+      const inner = wrapperBodies(stmt);
+      if (inner.length) {
+        for (const w of inner) visitScope(w.body, w.label ?? (label === "<bundle>" ? "<wrapper>" : label), depth + 1);
+        continue;
+      }
+      leftovers.push(stmt);
+    }
+    if (leftovers.length) scopeParts.push({ label, nodes: leftovers });
+  };
+
+  visitScope((ast.body as AnyNode[]) ?? [], "<bundle>", 0);
+  if (depthCapped) warnings.push(`[anti-exhaust] wrapper nesting deeper than ${MAX_WRAP_DEPTH}; deeper scopes not unwrapped`);
+  if (units.length === 0) return null;
+  if (units.length >= MAX_WRAPPED_UNITS) warnings.push(`unit cap ${MAX_WRAPPED_UNITS} reached while unwrapping`);
+  warnings.push(`unwrapped bundler wrappers: recovered ${units.length} unit(s) from inside IIFE/UMD/module wrappers`);
+
+  const byName = new Map<string, string>();
+  for (const u of units) if (!byName.has(u.name)) byName.set(u.name, u.id);
+  for (const u of units) {
+    u.references = resolveIdentifierRefs([(u.meta as { node: AnyNode }).node], byName, u.id);
+    delete (u.meta as { node?: AnyNode }).node;
+  }
+
+  let scopeCounter = 0;
+  for (const part of scopeParts) {
+    const base = part.label === "<bundle>" ? "<top-level>" : part.label === "<wrapper>" ? "<wrapper>" : `<module ${part.label}>`;
+    const groups = groupStatements(part.nodes, src);
+    groups.forEach((group, i) => {
+      const id = `scope:${scopeCounter++}`;
+      units.unshift({
+        id,
+        name: i === 0 ? base : `${base}#${i + 1}`,
+        kind: "module",
+        body: group.map((n) => src.slice(n.start, n.end)).join("\n"),
+        offset: group[0]!.start,
+        size: group.reduce((t, n) => t + (n.end - n.start), 0),
+        references: resolveIdentifierRefs(group, byName, id),
+        meta: { synthetic: true, wrapped: true },
+      });
+      entryPoints.push({ unitId: id, reason: "main", detail: `statements in ${part.label}` });
+    });
+  }
+  for (const u of units) {
+    if ((u.meta as { exported?: boolean }).exported) entryPoints.push({ unitId: u.id, reason: "export", detail: u.name });
+  }
+  return { units, entryPoints };
+}
+
+/** `module.exports = function…`, `exports.x = () => …`, `X.prototype.y = function…` */
+function exportAssignmentOf(node: AnyNode, src: string): { name: string; kind: CodeUnit["kind"]; node: AnyNode; exported: boolean } | null {
+  if (node.type !== "ExpressionStatement" || node.expression?.type !== "AssignmentExpression") return null;
+  const { left, right } = node.expression as AnyNode;
+  if (!right || !/^(FunctionExpression|ArrowFunctionExpression|ClassExpression)$/.test(right.type)) return null;
+  if (left.type !== "MemberExpression") return null;
+  const lhs = src.slice(left.start, left.end);
+  if (lhs.length > 120) return null;
+  const exported = /^(module\.exports|exports)\b/.test(lhs);
+  const name = right.id?.name && !exported ? right.id.name : lhs;
+  return { name, kind: right.type === "ClassExpression" ? "class" : "function", node, exported };
+}
+
+/**
+ * Function bodies that act as module scopes inside one statement: an IIFE callee,
+ * function arguments of a wrapper call (UMD factory), and functions in an object
+ * argument whose keys look like module paths (esbuild/rollup `__commonJS`).
+ * Ordinary callbacks with tiny bodies are not treated as scopes.
+ */
+function wrapperBodies(stmt: AnyNode): Array<{ body: AnyNode[]; label?: string }> {
+  let expr: AnyNode | null | undefined =
+    stmt.type === "ExpressionStatement" ? stmt.expression
+    : stmt.type === "ReturnStatement" ? stmt.argument
+    : stmt.type === "VariableDeclaration" && stmt.declarations.length === 1 ? (stmt.declarations[0] as AnyNode).init
+    : null;
+  // Peel `!function(){}()`, `void …`, `(0, …)` and `a = …`.
+  for (let i = 0; expr && i < 4; i++) {
+    if (expr.type === "UnaryExpression") expr = expr.argument;
+    else if (expr.type === "SequenceExpression") expr = expr.expressions[expr.expressions.length - 1];
+    else if (expr.type === "AssignmentExpression") expr = expr.right;
+    else break;
+  }
+  if (!expr || expr.type !== "CallExpression") return [];
+
+  const out: Array<{ body: AnyNode[]; label?: string }> = [];
+  const blockOf = (fn: AnyNode | null | undefined): AnyNode[] | null =>
+    fn && /^(FunctionExpression|ArrowFunctionExpression)$/.test(fn.type) && fn.body?.type === "BlockStatement" ? (fn.body.body as AnyNode[]) : null;
+
+  const callee = expr.callee as AnyNode;
+  const iife = blockOf(callee);
+  if (iife) out.push({ body: iife });
+
+  for (const arg of (expr.arguments as AnyNode[]) ?? []) {
+    const b = blockOf(arg);
+    if (b && b.length >= 2) out.push({ body: b });
+    if (arg.type === "ObjectExpression") {
+      for (const prop of (arg.properties as AnyNode[]) ?? []) {
+        if (prop.type !== "Property") continue;
+        const key = keyName(prop.key);
+        const fnBody = blockOf(prop.value);
+        if (key && fnBody && /[/.]/.test(key)) out.push({ body: fnBody, label: key.split("/").slice(-2).join("/") });
+      }
+    }
+  }
+  return out;
 }
 
 function declarationOf(node: AnyNode): { name: string; kind: CodeUnit["kind"]; node: AnyNode; exported: boolean } | null {
