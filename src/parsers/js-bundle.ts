@@ -25,7 +25,9 @@ export class JsBundleParser implements Parser {
   readonly format = "js-bundle" as const;
 
   canParse(input: ParserInput): boolean {
-    return /\.(js|cjs|mjs|jsx)$/i.test(input.path) || looksLikeJs(input.bytes);
+    // Decide by content: the extension only breaks ties for text, never claims a binary.
+    if (!isText(input.bytes)) return false;
+    return looksLikeJs(input.bytes) || /\.(js|cjs|mjs|jsx)$/i.test(input.path);
   }
 
   async parse(input: ParserInput): Promise<ArtifactModel> {
@@ -541,10 +543,23 @@ function collectStrings(body: string, unitId: string, out: ExtractedString[]): v
   }
 }
 
+function isText(bytes: Uint8Array): boolean {
+  const n = Math.min(bytes.length, 8192);
+  if (n === 0) return false;
+  let bad = 0;
+  for (let i = 0; i < n; i++) {
+    const c = bytes[i]!;
+    if (c === 0) return false;
+    if (c < 0x09 || (c > 0x0d && c < 0x20)) bad++;
+  }
+  return bad / n < 0.01;
+}
+
 function looksLikeJs(bytes: Uint8Array): boolean {
-  const head = new TextDecoder().decode(bytes.subarray(0, 512));
-  if (/[\x00-\x08\x0e-\x1f]/.test(head)) return false; // binary
-  return /\b(function|const|let|var|require\(|import\s|export\s)|=>/.test(head);
+  const head = new TextDecoder().decode(bytes.subarray(0, 16384));
+  // Skip a hashbang and a leading license block, which can push code past a short window.
+  const body = head.replace(/^#![^\n]*\n/, "").replace(/^\s*(\/\*[\s\S]*?\*\/\s*|\/\/[^\n]*\n\s*)*/, "");
+  return /\b(function|const|let|var|require\(|import\s|export\s|module\.exports)\b|=>/.test(body);
 }
 
 function flatFallback(path: string, byteLength: number, src: string, warnings: string[]): ArtifactModel {

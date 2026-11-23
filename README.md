@@ -240,11 +240,12 @@ Each pass exists because the one before it can't finish the job:
 
 | Command | What it does |
 |---|---|
-| `ree analyze <target>` | Ingest, run the engine, print stats, entry points, findings, and limitations. Flags: `--json`, `--findings <n>`, `--no-prune`, `--budget <tokens>` |
+| `ree analyze <target>` | **One command for any file.** Detects the format from content (not the extension) and routes it — including `.dmg`, `.app` and directories. Prints stats, entry points, findings and limitations; unsupported inputs get a clear message listing what works. Flags: `--json`, `--findings <n>`, `--no-prune`, `--budget <tokens>` |
 | `ree analyze <target> --reconstruct` | Run triage → synthesis → verification. Flags: `--dry-run`, `--max-units <n>`, `--no-verify`, `-o <file>` |
-| `ree app <target>` | Analyze a macOS `.dmg`, a `.app` bundle, or an extracted app directory. Flags: `--json`, `--max-artifacts <n>` |
+| `ree app <target>` | Alias for whole-app analysis of a macOS `.dmg`, a `.app` bundle, or an extracted directory (`ree analyze` routes these automatically). Flags: `--json`, `--max-artifacts <n>` |
 | `ree sanitize <target>` | Write the cleaned model's context slices and findings to JSON (`-o`, `--budget`) |
 | `ree trace <target>` | Print the reference tree from an entry point (`-e <unit>`, `-d <depth>`) |
+| `ree doctor` | Shows your Node version, which optional external tools are installed, what each missing tool would unlock (with the install command), and whether a model provider is configured — never printing a key. `--json` for scripts |
 | `ree mcp` | Start the MCP server on stdio |
 
 ### Whole-app analysis

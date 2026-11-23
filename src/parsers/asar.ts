@@ -37,7 +37,6 @@ export class AsarParser implements Parser {
   readonly format = "asar" as const;
 
   canParse(input: ParserInput): boolean {
-    if (input.path.toLowerCase().endsWith(".asar")) return true;
     const b = input.bytes;
     if (b.length < 17) return false;
     const r = new ByteReader(b);

@@ -5,12 +5,17 @@
  *   ree analyze <target>      ingest + anti-BLA report (+ optional reconstruction)
  *   ree sanitize <target>     write a cleaned, LLM-safe JSON model to disk
  *   ree trace <target>        print the call graph from an entry point
+ *   ree app <target>          .dmg / .app / directory (also routed by 'ree analyze')
+ *   ree doctor                Node version, optional tools, and what each unlocks
  *   ree mcp                   start the MCP server on stdio
  */
 import { writeFile } from "node:fs/promises";
 import { Command } from "commander";
 import { analyze } from "../core/analyze.js";
-import { analyzeApp } from "../apps/dmg.js";
+import { createRequire } from "node:module";
+import { analyzeApp, PlatformUnsupportedError } from "../apps/dmg.js";
+import { detectFormat, unsupportedMessage, SUPPORTED_SUMMARY, type Detection } from "../core/detect.js";
+import { runDoctor } from "./doctor.js";
 import { resolveProvider } from "../agents/providers.js";
 import { reeReconstructAll, reeTraceEntrypoint } from "../mcp/tools.js";
 import { startStdioServer } from "../mcp/server.js";
@@ -21,11 +26,11 @@ const program = new Command();
 program
   .name("ree")
   .description("REE — Reverse Engineer Everything. Budget-safe, decoy-resistant reverse engineering for authorized analysis.")
-  .version("0.1.0");
+  .version((createRequire(import.meta.url)("../../package.json") as { version: string }).version);
 
 program
   .command("analyze")
-  .argument("<target>", "artifact to analyze (.asar, .js, .wasm, .pyc, ELF/Mach-O/PE)")
+  .argument("<target>", "any supported artifact — format is detected from content (.asar, JS, .wasm, .pyc, ELF/Mach-O/PE, .dmg, .app or a directory)")
   .option("--json", "emit machine-readable JSON")
   .option("--findings <n>", "max findings to print", "25")
   .option("--no-prune", "disable reachability pruning")
@@ -36,6 +41,25 @@ program
   .option("--no-verify", "with --reconstruct: skip the verification agent")
   .option("-o, --out <file>", "with --reconstruct: write results JSON to a file")
   .action(async (target: string, opts) => {
+    let detected: Detection;
+    try {
+      detected = await detectFormat(target);
+    } catch {
+      console.error(`ree: cannot read ${target} (no such file or directory)`);
+      process.exitCode = 2;
+      return;
+    }
+    if (detected.route === "unsupported") {
+      console.error(unsupportedMessage(target, detected));
+      process.exitCode = 2;
+      return;
+    }
+    if (detected.route === "app") {
+      if (opts.reconstruct) console.error(dim("[ree] --reconstruct runs per artifact: use 'ree analyze <inner-path> --reconstruct' on an artifact listed below."));
+      await runApp(target, { budget: opts.budget, json: opts.json });
+      return;
+    }
+    if (!opts.json) console.error(dim(`[ree] detected: ${detected.label}`));
     const { report, slices, limitations } = await analyze(target, {
       antiBla: { prune: opts.prune },
       tokenBudget: Number(opts.budget),
@@ -158,15 +182,57 @@ program
 
 program
   .command("app")
-  .description("analyze a macOS .dmg, a .app bundle, or an extracted app directory")
+  .description("analyze a macOS .dmg, a .app bundle, or an extracted app directory (alias: 'ree analyze' routes these automatically)")
   .argument("<target>", "path to a .dmg, .app, or directory")
   .option("--budget <tokens>", "token budget per inner artifact", "60000")
   .option("--max-artifacts <n>", "max inner artifacts to analyze", "12")
   .option("--json", "emit machine-readable JSON")
   .action(async (target: string, opts) => {
+    await runApp(target, { budget: opts.budget, maxArtifacts: opts.maxArtifacts, json: opts.json });
+  });
+
+program
+  .command("doctor")
+  .description("check Node, optional external tools, and model-provider setup")
+  .option("--json", "emit machine-readable JSON")
+  .action((opts) => {
+    const pkg = createRequire(import.meta.url)("../../package.json") as { version: string; engines?: { node?: string } };
+    const r = runDoctor(process.env, pkg.engines?.node ?? ">=20");
+    if (opts.json) {
+      console.log(JSON.stringify({ ree: pkg.version, ...r }, null, 2));
+      return;
+    }
+    console.log(bold(`\nREE ${pkg.version} doctor`));
+    console.log(`${r.node.ok ? green("✓") : red("✗")} Node ${r.node.version} ${dim(`(requires ${r.node.required})`)}`);
+    console.log(`${dim("•")} platform: ${r.platform}`);
+    console.log(bold("\nOptional tools"));
+    for (const t of r.tools) {
+      if (!t.applicable) {
+        console.log(`${dim("–")} ${t.name}: ${dim(`not available on ${r.platform}`)} — would unlock ${t.unlocks}`);
+      } else if (t.found) {
+        console.log(`${green("✓")} ${t.name} ${dim(t.found)} — ${t.unlocks}`);
+      } else {
+        console.log(`${yellow("!")} ${t.name} missing — would unlock ${t.unlocks}${t.install ? `\n    install: ${t.install}` : ""}`);
+      }
+    }
+    console.log(bold("\nModel provider (reconstruction only)"));
+    if (r.provider.error) console.log(`${red("✗")} ${r.provider.error}`);
+    else console.log(`${r.provider.kind === "none" ? yellow("!") : green("✓")} ${r.provider.note}`);
+    console.log(bold("\nAlways available (no tools needed)"));
+    for (const f of SUPPORTED_SUMMARY.filter((x) => !/\.dmg/.test(x))) console.log(`${green("✓")} ${f}`);
+  });
+
+program
+  .command("mcp")
+  .description("start the REE MCP server on stdio")
+  .action(async () => {
+    await startStdioServer();
+  });
+
+async function runApp(target: string, opts: { budget?: string; maxArtifacts?: string; json?: boolean }): Promise<void> {
     const analysis = await analyzeApp(target, {
-      tokenBudget: Number(opts.budget),
-      maxArtifacts: Number(opts.maxArtifacts),
+      tokenBudget: Number(opts.budget ?? 60000),
+      maxArtifacts: Number(opts.maxArtifacts ?? 12),
     });
     if (opts.json) {
       console.log(
@@ -210,16 +276,9 @@ program
       );
     }
     console.log(dim(`\nRun 'ree analyze <inner-path>' for a full report on any one artifact.`));
-  });
-
-program
-  .command("mcp")
-  .description("start the REE MCP server on stdio")
-  .action(async () => {
-    await startStdioServer();
-  });
+  }
 
 program.parseAsync(process.argv).catch((e) => {
   console.error(`ree: ${(e as Error).message}`);
-  process.exit(1);
+  process.exit(e instanceof PlatformUnsupportedError ? 2 : 1);
 });

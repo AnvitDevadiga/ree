@@ -47,6 +47,18 @@ test("analyzeApp: a non-macOS host cannot mount a .dmg but says so clearly", asy
   if (canMountDmg()) return; // only meaningful off macOS
   const dir = mkdtempSync(join(tmpdir(), "ree-dmg-"));
   const fake = join(dir, "x.dmg");
-  writeFileSync(fake, "not a real dmg");
-  await assert.rejects(() => analyzeApp(fake), /requires macOS/);
+  const img = Buffer.alloc(4096);
+  img.write("koly", img.length - 512, "latin1"); // UDIF trailer, so detection says .dmg
+  writeFileSync(fake, img);
+  await assert.rejects(() => analyzeApp(fake), /\.dmg analysis requires macOS \(hdiutil\)/);
+});
+
+test("doctor: reports Node, tools, and provider without exposing secrets", async () => {
+  const { runDoctor, which } = await import("../src/cli/doctor.js");
+  const r = runDoctor({ PATH: process.env.PATH, ANTHROPIC_API_KEY: "sk-secret-value-123" }, ">=20");
+  assert.equal(r.node.version, process.versions.node);
+  assert.ok(r.tools.some((t) => t.bin === "hdiutil"));
+  assert.doesNotMatch(JSON.stringify(r), /sk-secret-value-123/, "never prints a key");
+  assert.equal(r.provider.kind, "misconfigured"); // key but no spend cap
+  assert.equal(which("definitely-not-a-real-binary-ree", { PATH: process.env.PATH }), null);
 });

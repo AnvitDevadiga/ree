@@ -15,7 +15,8 @@
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir, platform } from "node:os";
-import { join, extname, basename } from "node:path";
+import { join, basename } from "node:path";
+import { detectFormat } from "../core/detect.js";
 import { analyze, type AnalyzeOptions, type AnalyzeResult } from "../core/analyze.js";
 import {
   collectAppArtifacts,
@@ -48,6 +49,9 @@ export interface AppAnalyzeOptions extends AnalyzeOptions {
   maxArtifacts?: number;
 }
 
+/** Raised when a feature needs a platform this host isn't (e.g. .dmg mounting off macOS). */
+export class PlatformUnsupportedError extends Error {}
+
 /** True when `.dmg` mounting is possible on this host. */
 export function canMountDmg(): boolean {
   return platform() === "darwin";
@@ -60,7 +64,9 @@ export function canMountDmg(): boolean {
  */
 export async function withMountedDmg<T>(dmgPath: string, fn: (mountPoint: string) => Promise<T> | T): Promise<T> {
   if (!canMountDmg()) {
-    throw new Error(`mounting .dmg requires macOS (hdiutil); this host is ${platform()}. Extract the .app and point REE at it instead.`);
+    throw new PlatformUnsupportedError(
+      `.dmg analysis requires macOS (hdiutil); this host is ${platform()}. Extract the .app on a Mac (or with a tool like 7-Zip) and run 'ree analyze <MyApp.app>' instead.`,
+    );
   }
   const mountPoint = mkdtempSync(join(tmpdir(), "ree-dmg-"));
   let attached = false;
@@ -117,7 +123,6 @@ async function analyzeRoot(root: string, kind: AppAnalysis["kind"], source: stri
  * AnalyzeResult per discovered inner artifact.
  */
 export async function analyzeApp(path: string, opts: AppAnalyzeOptions = {}): Promise<AppAnalysis> {
-  const ext = extname(path).toLowerCase();
   let st;
   try {
     st = statSync(path);
@@ -125,14 +130,14 @@ export async function analyzeApp(path: string, opts: AppAnalyzeOptions = {}): Pr
     throw new Error(`cannot read ${path}`);
   }
 
-  if (st.isFile() && ext === ".dmg") {
+  if (st.isFile() && (await detectFormat(path)).kind === "dmg") {
     const analysis = await withMountedDmg(path, (mount) => analyzeRoot(mount, "dmg", path, opts));
     analysis.mounted = "(read-only, detached)";
     return analysis;
   }
   if (st.isDirectory()) {
-    const kind: AppAnalysis["kind"] = ext === ".app" ? "app" : "directory";
+    const kind: AppAnalysis["kind"] = (await detectFormat(path)).kind === "app-bundle" ? "app" : "directory";
     return analyzeRoot(path, kind, path, opts);
   }
-  throw new Error(`unsupported app target: ${basename(path)} (expected a .dmg, a .app, or a directory)`);
+  throw new Error(`unsupported app target: ${basename(path)} (not a .dmg disk image, a .app bundle, or a directory)`);
 }
