@@ -12,6 +12,8 @@
  * job of an external disassembler; REE's role for native targets is budget-safe
  * triage — a compact symbol/import/string skeleton instead of raw bytes.
  */
+import { decompileWithGhidra, findGhidra, GHIDRA } from "../tools/ghidra.js";
+import { installHint } from "../tools/external.js";
 import type { ArtifactFormat, ArtifactModel, CodeUnit, EntryPoint, ExtractedString, Parser, ParserInput } from "../core/types.js";
 import { ByteReader, extractStrings } from "./reader.js";
 
@@ -26,15 +28,87 @@ export class NativeParser implements Parser {
 
   async parse(input: ParserInput): Promise<ArtifactModel> {
     const fmt = detectNative(input.bytes);
+    let model: ArtifactModel;
     try {
-      if (fmt === "elf") return parseElf(input);
-      if (fmt === "macho") return parseMachO(input);
-      if (fmt === "pe") return parsePe(input);
+      if (fmt === "elf") model = parseElf(input);
+      else if (fmt === "macho") model = parseMachO(input);
+      else if (fmt === "pe") model = parsePe(input);
+      else return stringsOnly(input, "unknown", "unrecognized native format");
     } catch (e) {
-      return stringsOnly(input, fmt, `structural parse failed: ${(e as Error).message}`);
+      model = stringsOnly(input, fmt, `structural parse failed: ${(e as Error).message}`);
     }
-    return stringsOnly(input, "unknown", "unrecognized native format");
+    return enrichWithGhidra(model, input.path);
   }
+}
+
+/**
+ * Optional: decompile functions to C with Ghidra headless and merge them into
+ * the structural model — by name (Mach-O's leading underscore tolerated), then
+ * by address; functions only Ghidra found (stripped binaries) become new units;
+ * callees become reference edges. Without Ghidra, the model is unchanged and
+ * the limitations report gives the install command.
+ */
+async function enrichWithGhidra(model: ArtifactModel, path: string): Promise<ArtifactModel> {
+  const tool = process.env.REE_DISABLE_GHIDRA ? null : findGhidra();
+  if (!tool) return { ...model, meta: { ...model.meta, decompiler: "none", ghidraInstall: installHint(GHIDRA) } };
+  let result;
+  try {
+    result = await decompileWithGhidra(tool, path);
+  } catch (e) {
+    return {
+      ...model,
+      warnings: [...model.warnings, `Ghidra failed: ${(e as Error).message}; structure-only analysis kept`],
+      meta: { ...model.meta, decompiler: "none", ghidraFailed: true },
+    };
+  }
+  const norm = (n: string) => n.replace(/^_+/, "");
+  const units = model.units.map((u) => ({ ...u, meta: { ...u.meta } }));
+  const byName = new Map<string, CodeUnit>();
+  const byAddr = new Map<number, CodeUnit>();
+  for (const u of units) {
+    if (u.kind !== "function") continue;
+    if (!byName.has(norm(u.name))) byName.set(norm(u.name), u);
+    if (typeof u.offset === "number") byAddr.set(u.offset, u);
+  }
+  let matched = 0;
+  let added = 0;
+  let withC = 0;
+  const unitOf = new Map<string, CodeUnit>();
+  for (const f of result.functions) {
+    const addr = Number.parseInt(f.entry.replace(/^.*:/, ""), 16);
+    let u = byName.get(norm(f.name)) ?? (Number.isFinite(addr) ? byAddr.get(addr) : undefined);
+    if (u) matched++;
+    else {
+      u = { id: `ghidra:${f.entry}`, name: f.name, kind: "function", offset: Number.isFinite(addr) ? addr : undefined, references: [], meta: { addr: `0x${f.entry}`, refToken: f.name } };
+      units.push(u);
+      byName.set(norm(f.name), u);
+      added++;
+    }
+    if (f.c) {
+      u.body = f.c;
+      withC++;
+    }
+    u.meta = { ...u.meta, decompiler: "ghidra", signature: f.signature };
+    unitOf.set(norm(f.name), u);
+  }
+  for (const f of result.functions) {
+    const u = unitOf.get(norm(f.name));
+    if (!u) continue;
+    const refs = new Set(u.references);
+    for (const c of f.callees) {
+      const t = unitOf.get(norm(c)) ?? byName.get(norm(c));
+      if (t && t.id !== u.id) refs.add(t.id);
+    }
+    u.references = [...refs];
+  }
+  const warnings = [...model.warnings];
+  if (result.rejected) warnings.push(`${result.rejected} malformed line(s) in Ghidra output were ignored`);
+  return {
+    ...model,
+    units,
+    warnings,
+    meta: { ...model.meta, decompiler: "ghidra", ghidraFunctions: result.functions.length, ghidraWithC: withC, ghidraMatched: matched, ghidraAdded: added },
+  };
 }
 
 export function detectNative(b: Uint8Array): ArtifactFormat {

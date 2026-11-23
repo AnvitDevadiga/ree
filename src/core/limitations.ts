@@ -27,9 +27,16 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
 
   // Depth of support per format.
   if (fmt === "elf" || fmt === "macho" || fmt === "pe") {
-    out.push(
-      `Native (${fmt}) analysis is structural only — symbols, imports and exports. REE does not decompile machine code; pair it with Ghidra/Hopper/IDA for instruction-level recovery.`,
-    );
+    const m = model.meta as { decompiler?: string; ghidraInstall?: string; ghidraFunctions?: number; ghidraWithC?: number; ghidraFailed?: boolean };
+    if (m.decompiler === "ghidra") {
+      out.push(
+        `Decompiled with Ghidra: ${m.ghidraWithC ?? 0} of ${m.ghidraFunctions ?? 0} functions have C pseudocode. Decompiled C is an approximation — types, variable names and control flow are reconstructed, not recovered; indirect calls are missing from the call graph.`,
+      );
+    } else {
+      out.push(
+        `Native (${fmt}) analysis is structural only — symbols, imports and exports; machine code was not decompiled${m.ghidraFailed ? " (Ghidra was found but failed; see warnings)" : m.ghidraInstall ? `. Install Ghidra to unlock C pseudocode and a call graph: ${m.ghidraInstall}` : ""}.`,
+      );
+    }
   }
   if (fmt === "pyc") {
     out.push(

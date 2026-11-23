@@ -9,6 +9,7 @@
 import { platform } from "node:os";
 import { resolveProvider } from "../agents/providers.js";
 import { ILSPY, JADX, VINEFLOWER, findTool, which, type ToolSpec } from "../tools/external.js";
+import { GHIDRA } from "../tools/ghidra.js";
 
 export { which };
 
@@ -39,6 +40,7 @@ export const OPTIONAL_TOOLS: OptionalTool[] = [
   { bin: JADX.bin, name: JADX.name, unlocks: JADX.unlocks, install: JADX.install as OptionalTool["install"] },
   { bin: VINEFLOWER.bin, name: VINEFLOWER.name, unlocks: VINEFLOWER.unlocks, install: VINEFLOWER.install as OptionalTool["install"] },
   { bin: ILSPY.bin, name: ILSPY.name, unlocks: ILSPY.unlocks, install: ILSPY.install as OptionalTool["install"], spec: ILSPY },
+  { bin: GHIDRA.bin, name: GHIDRA.name, unlocks: GHIDRA.unlocks, install: GHIDRA.install as OptionalTool["install"], spec: GHIDRA },
 ];
 
 export interface DoctorReport {
