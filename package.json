@@ -29,7 +29,8 @@
     "fixtures:android": "tsx benchmarks/fixtures/fetch-android.ts",
     "fixtures:java": "tsx benchmarks/fixtures/java.ts",
     "fixtures:dotnet": "tsx benchmarks/fixtures/dotnet.ts",
-    "fixtures:native": "tsx benchmarks/fixtures/native.ts"
+    "fixtures:native": "tsx benchmarks/fixtures/native.ts",
+    "bench:pyc": "tsx benchmarks/pyc/evaluate.ts"
   },
   "files": [
     "dist",

@@ -39,9 +39,17 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
     }
   }
   if (fmt === "pyc") {
-    out.push(
-      "Python bytecode: code objects, names and constants are recovered, but there is no bytecode-level call graph, so nothing is pruned.",
-    );
+    const m = model.meta as { decompiler?: string; decompileHint?: string; decompileFailed?: string; decompileIncomplete?: boolean; pythonVersion?: string };
+    if (m.decompiler && m.decompiler !== "none") {
+      out.push(
+        `Decompiled with ${m.decompiler}${m.decompileIncomplete ? " — some sections could not be decompiled and are marked in the source" : ""}. Python decompilers are often wrong in subtle ways (REE's own evaluation found broken generators and slices); verify against behavior before trusting it.`,
+      );
+    } else {
+      out.push(
+        `Python ${m.pythonVersion ?? "?"} bytecode: code objects, names and constants are recovered, but method bodies were not decompiled${m.decompileFailed ? ` (${m.decompileFailed} failed on this file)` : ""}${m.decompileHint ? ` — ${m.decompileHint}` : ""}.`,
+      );
+    }
+    out.push("There is no bytecode-level call graph, so nothing is pruned.");
   }
   if (fmt === "apk") {
     const m = model.meta as {

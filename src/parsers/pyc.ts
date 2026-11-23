@@ -16,6 +16,59 @@
  */
 import type { ArtifactModel, CodeUnit, ExtractedString, Parser, ParserInput } from "../core/types.js";
 import { ByteReader } from "./reader.js";
+import { decompilePyc, pickPyDecompiler, pyDecompileHint, splitTopLevel } from "../tools/pydecompile.js";
+
+/**
+ * Optional: decompile with the best available tool (see tools/pydecompile.ts)
+ * and attach source to the code-object units — top-level functions to
+ * `<module>.name`, classes (methods included) to `<module>.Class`, the rest to
+ * `<module>`. Method/nested code objects inside a class that received source
+ * are folded into it. On failure or with no tool, structure is kept.
+ */
+async function enrichWithDecompiler(model: ArtifactModel, path: string): Promise<ArtifactModel> {
+  const magic = (model.meta as { magic?: number }).magic ?? 0;
+  const tool = pickPyDecompiler(magic);
+  if (!tool) return { ...model, meta: { ...model.meta, decompiler: "none", decompileHint: pyDecompileHint(magic) } };
+  let result;
+  try {
+    result = await decompilePyc(tool, path);
+  } catch (e) {
+    return {
+      ...model,
+      warnings: [...model.warnings, `${(e as Error).message}; structure-only analysis kept`],
+      meta: { ...model.meta, decompiler: "none", decompileFailed: tool.spec.bin, decompileHint: pyDecompileHint(magic) },
+    };
+  }
+  const { blocks, module } = splitTopLevel(result.source);
+  const units = model.units.map((u) => ({ ...u, meta: { ...u.meta } }));
+  let attached = 0;
+  for (const u of units) {
+    if (u.name === "<module>") {
+      if (module) (u.body = module), attached++;
+      continue;
+    }
+    const m = /^<module>\.([^.]+)$/.exec(u.name);
+    const block = m ? blocks.get(m[1]!) : undefined;
+    if (block) {
+      u.body = block;
+      u.meta = { ...u.meta, decompiler: result.tool };
+      attached++;
+    }
+  }
+  // Code objects nested in a block that now has source are part of that source.
+  const withSource = new Set(units.filter((u) => u.body && u.name !== "<module>").map((u) => u.name));
+  const kept = units.filter((u) => {
+    const top = /^(<module>\.[^.]+)\./.exec(u.name)?.[1];
+    return !(top && withSource.has(top));
+  });
+  const live = new Set(kept.map((u) => u.id));
+  for (const u of kept) u.references = u.references.filter((r) => live.has(r));
+  return {
+    ...model,
+    units: kept,
+    meta: { ...model.meta, decompiler: result.tool, decompiledBlocks: attached, decompileIncomplete: result.incomplete },
+  };
+}
 
 const FLAG_REF = 0x80;
 const NULL = Symbol("marshal-null");
@@ -67,6 +120,10 @@ export class PycParser implements Parser {
   }
 
   async parse(input: ParserInput): Promise<ArtifactModel> {
+    return enrichWithDecompiler(this.parseStructure(input), input.path);
+  }
+
+  private parseStructure(input: ParserInput): ArtifactModel {
     const warnings: string[] = [];
     const r = new ByteReader(input.bytes);
     const magic = r.u16();

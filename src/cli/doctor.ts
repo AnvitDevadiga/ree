@@ -10,6 +10,7 @@ import { platform } from "node:os";
 import { resolveProvider } from "../agents/providers.js";
 import { ILSPY, JADX, VINEFLOWER, findTool, which, type ToolSpec } from "../tools/external.js";
 import { GHIDRA } from "../tools/ghidra.js";
+import { PYCDC, UNCOMPYLE6 } from "../tools/pydecompile.js";
 
 export { which };
 
@@ -41,6 +42,8 @@ export const OPTIONAL_TOOLS: OptionalTool[] = [
   { bin: VINEFLOWER.bin, name: VINEFLOWER.name, unlocks: VINEFLOWER.unlocks, install: VINEFLOWER.install as OptionalTool["install"] },
   { bin: ILSPY.bin, name: ILSPY.name, unlocks: ILSPY.unlocks, install: ILSPY.install as OptionalTool["install"], spec: ILSPY },
   { bin: GHIDRA.bin, name: GHIDRA.name, unlocks: GHIDRA.unlocks, install: GHIDRA.install as OptionalTool["install"], spec: GHIDRA },
+  { bin: PYCDC.bin, name: PYCDC.name, unlocks: PYCDC.unlocks, install: { darwin: PYCDC.install.any, linux: PYCDC.install.any, win32: PYCDC.install.any }, spec: PYCDC },
+  { bin: UNCOMPYLE6.bin, name: UNCOMPYLE6.name, unlocks: UNCOMPYLE6.unlocks, install: { darwin: UNCOMPYLE6.install.any, linux: UNCOMPYLE6.install.any, win32: UNCOMPYLE6.install.any }, spec: UNCOMPYLE6 },
 ];
 
 export interface DoctorReport {

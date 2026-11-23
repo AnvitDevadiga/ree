@@ -12,6 +12,8 @@ Licenses were checked for compatibility with MIT before integration.
 | jadx | Android APK/AAB → Java decompilation | Apache-2.0 | https://github.com/skylot/jadx |
 | Vineflower | Java JAR/`.class` → Java decompilation | Apache-2.0 | https://github.com/Vineflower/vineflower |
 | ilspycmd (ILSpy) | .NET assembly → C# decompilation | MIT | https://github.com/icsharpcode/ILSpy |
+| pycdc (Decompyle++) | Python `.pyc` → source (preferred, any version) | GPL-3.0 — run as a separate program, never bundled or linked | https://github.com/zrax/pycdc |
+| uncompyle6 | Python `.pyc` → source (bytecode ≤ 3.8) | GPL-3.0 — run as a separate program, never bundled or linked | https://github.com/rocky/python-uncompyle6 |
 | Ghidra (`analyzeHeadless`) | Native ELF/Mach-O/PE → C pseudocode + call graph | Apache-2.0 | https://github.com/NationalSecurityAgency/ghidra |
 | hdiutil | Read-only `.dmg` mounting (macOS) | Ships with macOS | Apple |
 
@@ -27,6 +29,7 @@ caches. They are not included in this repository or the npm package.
 | `inventory-cli.jar` (written for this repo, compiled locally) | JAR ground-truth tests | MIT (this repo) | `benchmarks/fixtures/java.ts` |
 | Newtonsoft.Json 13.0.3 (NuGet, netstandard2.0 DLL, SHA-256 pinned) | .NET tests (`npm run fixtures:dotnet`) | MIT | https://github.com/JamesNK/Newtonsoft.Json |
 | `inventory-native` (C, written for this repo, compiled locally) | native ground-truth tests (`npm run fixtures:native`) | MIT (this repo) | `benchmarks/fixtures/native.ts` |
+| CPython stdlib `colorsys.py` for 3.8, 3.10, 3.12, 3.13, 3.14 (`uv` installs) | `.pyc` decompiler evaluation (`npm run bench:pyc`) | PSF-2.0 | https://github.com/python/cpython |
 | ms 2.1.3 | reconstruction benchmark | MIT | https://github.com/vercel/ms |
 | escape-html 1.0.3 | reconstruction benchmark | MIT | https://github.com/component/escape-html |
 | dlv 1.1.3 | reconstruction benchmark | MIT | https://github.com/developit/dlv |

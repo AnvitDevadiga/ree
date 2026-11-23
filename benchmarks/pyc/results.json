@@ -1,0 +1,387 @@
+{
+  "generated": "2026-11-23T06:14:08.987Z",
+  "pythons": [
+    "3.8",
+    "3.10",
+    "3.12",
+    "3.13",
+    "3.14"
+  ],
+  "decompilers": [
+    {
+      "name": "pycdc",
+      "license": "GPL-3.0",
+      "installed": false
+    },
+    {
+      "name": "decompyle3",
+      "license": "GPL-3.0",
+      "installed": true
+    },
+    {
+      "name": "uncompyle6",
+      "license": "GPL-3.0",
+      "installed": true
+    }
+  ],
+  "results": [
+    {
+      "python": "3.8",
+      "module": "colorsys",
+      "decompiler": "pycdc",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "not installed"
+      }
+    },
+    {
+      "python": "3.8",
+      "module": "colorsys",
+      "decompiler": "decompyle3",
+      "cell": {
+        "produced": true,
+        "compiles": false,
+        "functions": "6/6",
+        "behavior": "-",
+        "note": "expr ::= LOAD_STR (1)"
+      }
+    },
+    {
+      "python": "3.8",
+      "module": "colorsys",
+      "decompiler": "uncompyle6",
+      "cell": {
+        "produced": true,
+        "compiles": true,
+        "functions": "6/6",
+        "behavior": "6/6"
+      }
+    },
+    {
+      "python": "3.8",
+      "module": "ree_sample",
+      "decompiler": "pycdc",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "not installed"
+      }
+    },
+    {
+      "python": "3.8",
+      "module": "ree_sample",
+      "decompiler": "decompyle3",
+      "cell": {
+        "produced": true,
+        "compiles": false,
+        "functions": "8/8",
+        "behavior": "-",
+        "note": "expr ::= LOAD_STR (1)"
+      }
+    },
+    {
+      "python": "3.8",
+      "module": "ree_sample",
+      "decompiler": "uncompyle6",
+      "cell": {
+        "produced": true,
+        "compiles": false,
+        "functions": "8/8",
+        "behavior": "-"
+      }
+    },
+    {
+      "python": "3.10",
+      "module": "colorsys",
+      "decompiler": "pycdc",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "not installed"
+      }
+    },
+    {
+      "python": "3.10",
+      "module": "colorsys",
+      "decompiler": "decompyle3",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.10, for decompilation"
+      }
+    },
+    {
+      "python": "3.10",
+      "module": "colorsys",
+      "decompiler": "uncompyle6",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.10, for decompilation"
+      }
+    },
+    {
+      "python": "3.10",
+      "module": "ree_sample",
+      "decompiler": "pycdc",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "not installed"
+      }
+    },
+    {
+      "python": "3.10",
+      "module": "ree_sample",
+      "decompiler": "decompyle3",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.10, for decompilation"
+      }
+    },
+    {
+      "python": "3.10",
+      "module": "ree_sample",
+      "decompiler": "uncompyle6",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.10, for decompilation"
+      }
+    },
+    {
+      "python": "3.12",
+      "module": "colorsys",
+      "decompiler": "pycdc",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "not installed"
+      }
+    },
+    {
+      "python": "3.12",
+      "module": "colorsys",
+      "decompiler": "decompyle3",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.12.0, for decompilation"
+      }
+    },
+    {
+      "python": "3.12",
+      "module": "colorsys",
+      "decompiler": "uncompyle6",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.12.0, for decompilation"
+      }
+    },
+    {
+      "python": "3.12",
+      "module": "ree_sample",
+      "decompiler": "pycdc",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "not installed"
+      }
+    },
+    {
+      "python": "3.12",
+      "module": "ree_sample",
+      "decompiler": "decompyle3",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.12.0, for decompilation"
+      }
+    },
+    {
+      "python": "3.12",
+      "module": "ree_sample",
+      "decompiler": "uncompyle6",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.12.0, for decompilation"
+      }
+    },
+    {
+      "python": "3.13",
+      "module": "colorsys",
+      "decompiler": "pycdc",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "not installed"
+      }
+    },
+    {
+      "python": "3.13",
+      "module": "colorsys",
+      "decompiler": "decompyle3",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.13.0, for decompilation"
+      }
+    },
+    {
+      "python": "3.13",
+      "module": "colorsys",
+      "decompiler": "uncompyle6",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.13.0, for decompilation"
+      }
+    },
+    {
+      "python": "3.13",
+      "module": "ree_sample",
+      "decompiler": "pycdc",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "not installed"
+      }
+    },
+    {
+      "python": "3.13",
+      "module": "ree_sample",
+      "decompiler": "decompyle3",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.13.0, for decompilation"
+      }
+    },
+    {
+      "python": "3.13",
+      "module": "ree_sample",
+      "decompiler": "uncompyle6",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.13.0, for decompilation"
+      }
+    },
+    {
+      "python": "3.14",
+      "module": "colorsys",
+      "decompiler": "pycdc",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "not installed"
+      }
+    },
+    {
+      "python": "3.14",
+      "module": "colorsys",
+      "decompiler": "decompyle3",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.14, for decompilation"
+      }
+    },
+    {
+      "python": "3.14",
+      "module": "colorsys",
+      "decompiler": "uncompyle6",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.14, for decompilation"
+      }
+    },
+    {
+      "python": "3.14",
+      "module": "ree_sample",
+      "decompiler": "pycdc",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "not installed"
+      }
+    },
+    {
+      "python": "3.14",
+      "module": "ree_sample",
+      "decompiler": "decompyle3",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.14, for decompilation"
+      }
+    },
+    {
+      "python": "3.14",
+      "module": "ree_sample",
+      "decompiler": "uncompyle6",
+      "cell": {
+        "produced": false,
+        "compiles": false,
+        "functions": "-",
+        "behavior": "-",
+        "note": "Unsupported Python version, 3.14, for decompilation"
+      }
+    }
+  ]
+}
