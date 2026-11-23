@@ -57,6 +57,19 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
     if (m.hermesBundles) out.push(`${m.hermesBundles} React Native bundle(s) are Hermes bytecode; REE does not decompile Hermes.`);
     if (m.nativeLibs) out.push(`${m.nativeLibs} native library file(s) (.so) were listed but not analyzed; run 'ree analyze' on an extracted .so for its structure.`);
   }
+  if (fmt === "jar") {
+    const m = model.meta as { decompiler?: string; vineflowerInstall?: string; classes?: number; decompiledClasses?: number; nestedJars?: number; classParseFailures?: number };
+    if (m.decompiler !== "vineflower") {
+      out.push(
+        `Java bytecode was read for structure only (classes, fields, method signatures, references) — method bodies were not decompiled${m.vineflowerInstall ? `: Vineflower is not installed. Install it to unlock Java source: ${m.vineflowerInstall}` : ""}.`,
+      );
+    } else {
+      out.push(`Decompiled with Vineflower (${m.decompiledClasses ?? 0} source files); decompiler output can be inexact, and generics or lambdas may not match the original source exactly.`);
+    }
+    out.push("Class references come from the constant pool; reflection, service loading and dependency injection are not visible, so nothing is pruned.");
+    if (m.nestedJars) out.push(`${m.nestedJars} nested library JAR(s) were counted but not analyzed; extract one and run 'ree analyze' on it.`);
+    if (m.classParseFailures) out.push(`${m.classParseFailures} class file(s) could not be parsed and are missing from the report.`);
+  }
   if (fmt === "wasm") {
     out.push("WASM is decoded to a WAT-style listing; high-level types and names beyond the name section are not recovered.");
   }

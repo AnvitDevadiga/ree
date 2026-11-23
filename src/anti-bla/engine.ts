@@ -17,7 +17,7 @@ import { analyzeReachability, keepReachable } from "./reachability.js";
 import { DEFAULT_THRESHOLDS, detectContextBombs, elideBombLiterals, type BombThresholds } from "./context-bomb.js";
 import { DEFAULT_DECOY_THRESHOLDS, detectDecoyFamilies, type DecoyFamilyThresholds } from "./decoy-family.js";
 import { foldOpaquePredicates } from "./opaque-predicates.js";
-import { detectStringDecoder, sanitizeBody, sanitizeStrings } from "./sanitizer.js";
+import { detectStringDecoder, redactInjections, sanitizeBody, sanitizeStrings } from "./sanitizer.js";
 
 export interface EngineOptions {
   foldPredicates?: boolean;
@@ -150,7 +150,13 @@ export function renderUnit(u: CodeUnit, nameById: Map<string, string>): string {
     if (Array.isArray(v) && v.length) lines.push(`// ${k}: ${v.slice(0, 40).map((x) => JSON.stringify(x)).join(", ")}`);
     else if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") lines.push(`// ${k}: ${v}`);
   }
-  return [...header, ...lines].join("\n");
+  // Summaries are built from parser metadata — symbol, method, field and class
+  // names that a hostile artifact controls (bytecode and native names can hold
+  // almost any text). They never passed the body sanitizer, so redact here.
+  const summary = redactInjections([...header, ...lines].join("\n"));
+  return summary.count
+    ? `// [ree] ${summary.count} instruction-like name(s) in this artifact's metadata were redacted.\n${summary.text}`
+    : summary.text;
 }
 
 /**

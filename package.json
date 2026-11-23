@@ -26,7 +26,8 @@
     "prepublishOnly": "npm run clean && npm run build && npm test",
     "bench:real": "tsx benchmarks/real/run.ts",
     "bench:reconstruct": "tsx benchmarks/reconstruct/run.ts",
-    "fixtures:android": "tsx benchmarks/fixtures/fetch-android.ts"
+    "fixtures:android": "tsx benchmarks/fixtures/fetch-android.ts",
+    "fixtures:java": "tsx benchmarks/fixtures/java.ts"
   },
   "files": [
     "dist",

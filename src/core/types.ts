@@ -16,6 +16,7 @@ export type ArtifactFormat =
   | "macho"
   | "pe"
   | "apk"
+  | "jar"
   | "unknown";
 
 /** A single logical unit of code recovered from an artifact (a module, function, section). */

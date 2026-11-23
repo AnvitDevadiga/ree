@@ -10,6 +10,7 @@ Licenses were checked for compatibility with MIT before integration.
 | Tool | Used for | License | Project |
 |---|---|---|---|
 | jadx | Android APK/AAB → Java decompilation | Apache-2.0 | https://github.com/skylot/jadx |
+| Vineflower | Java JAR/`.class` → Java decompilation | Apache-2.0 | https://github.com/Vineflower/vineflower |
 | hdiutil | Read-only `.dmg` mounting (macOS) | Ships with macOS | Apple |
 
 ## Test fixtures (downloaded, not redistributed)
@@ -20,6 +21,8 @@ caches. They are not included in this repository or the npm package.
 | Fixture | Used by | License | Source |
 |---|---|---|---|
 | Coffee 2.27 (`com.github.muellerma.coffee`), F-Droid build, SHA-256 pinned | APK tests (`npm run fixtures:android`) | Apache-2.0 | https://github.com/muellerma/coffee |
+| Gson 2.11.0 (Maven Central, SHA-256 pinned) | JAR tests (`npm run fixtures:java`) | Apache-2.0 | https://github.com/google/gson |
+| `inventory-cli.jar` (written for this repo, compiled locally) | JAR ground-truth tests | MIT (this repo) | `benchmarks/fixtures/java.ts` |
 | ms 2.1.3 | reconstruction benchmark | MIT | https://github.com/vercel/ms |
 | escape-html 1.0.3 | reconstruction benchmark | MIT | https://github.com/component/escape-html |
 | dlv 1.1.3 | reconstruction benchmark | MIT | https://github.com/developit/dlv |

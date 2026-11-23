@@ -8,7 +8,7 @@
  */
 import { platform } from "node:os";
 import { resolveProvider } from "../agents/providers.js";
-import { JADX, which } from "../tools/external.js";
+import { JADX, VINEFLOWER, which } from "../tools/external.js";
 
 export { which };
 
@@ -35,6 +35,7 @@ export const OPTIONAL_TOOLS: OptionalTool[] = [
     install: { darwin: "ships with macOS" },
   },
   { bin: JADX.bin, name: JADX.name, unlocks: JADX.unlocks, install: JADX.install as OptionalTool["install"] },
+  { bin: VINEFLOWER.bin, name: VINEFLOWER.name, unlocks: VINEFLOWER.unlocks, install: VINEFLOWER.install as OptionalTool["install"] },
 ];
 
 export interface DoctorReport {

@@ -235,6 +235,7 @@ Each pass exists because the one before it can't finish the job:
 | **Python `.pyc`** (3.7 – 3.14) | Full marshal decoder, per-version code-object layouts | — | safe default | params, names, consts |
 | **ELF / Mach-O / PE** | Headers, sections, symbols, imports, exports, strings | — | safe default | symbol and import summary |
 | **Android APK / AAB** | Bounded ZIP + binary-manifest reader: package, components, permissions, DEX class counts, native libs; bundled React Native / Cordova JS fully analyzed. App classes decompiled to Java with the optional **jadx** | — | safe default | app classes (Java), bundled JS; libraries summarized |
+| **Java JAR / `.class`** | Bounded class-file reader: every class's superclass, interfaces, fields and method signatures, a constant-pool reference graph, `Main-Class` / `main()` entry points, fat-JAR libs counted. Source decompiled with the optional **Vineflower** | constant pool | safe default | Java source, or a structural summary per class |
 | **`.dmg` / `.app`** | Read-only mount, bundle walk, routes inner artifacts | per artifact | per artifact | one report per artifact |
 
 ## ⌨️ CLI

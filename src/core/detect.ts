@@ -56,6 +56,7 @@ export const SUPPORTED_SUMMARY = [
   "Python bytecode (.pyc, 3.7–3.14; structure only)",
   "ELF, Mach-O (incl. universal) and PE binaries (structure only)",
   "Android APK / AAB (manifest, DEX and bundled JS always; Java source with optional jadx)",
+  "Java JAR / .class (bytecode structure always; Java source with optional Vineflower)",
   "macOS .dmg images (macOS only) and .app bundles / extracted app directories",
 ];
 
@@ -104,7 +105,7 @@ export function classify(head: Uint8Array, tail: Uint8Array, path = ""): Detecti
       // Shared magic: universal Mach-O has a small arch count; a Java class has major version >= 45.
       const second = u32be(4);
       if (second < 32) return { kind: "macho", label: "universal Mach-O binary", route: "parser" };
-      return { kind: "java-class", label: "Java .class file", route: "unsupported", hint: "Java bytecode support (via an optional decompiler) is planned" };
+      return { kind: "java-class", label: "Java .class file", route: "parser" };
     }
   }
   if (b.length >= 2 && b[0] === 0x4d && b[1] === 0x5a) return { kind: "pe", label: "PE (Windows) binary", route: "parser" };
@@ -135,7 +136,7 @@ function classifyZip(tail: Uint8Array): Detection {
   if (/base\/manifest\/AndroidManifest\.xml/.test(names)) return { kind: "aab", label: "Android App Bundle (.aab)", route: "parser" };
   if (/AndroidManifest\.xml/.test(names) && /classes\d*\.dex/.test(names)) return { kind: "apk", label: "Android APK", route: "parser" };
   if (/Payload\/[^/]+\.app\//.test(names)) return { kind: "ipa", label: "iOS app archive (.ipa)", route: "unsupported", hint: "structure-only .ipa support for unencrypted builds is planned" };
-  if (/META-INF\/MANIFEST\.MF/.test(names) || /\.class/.test(names)) return { kind: "jar", label: "Java archive (.jar)", route: "unsupported", hint: "Java support (via an optional decompiler) is planned" };
+  if (/META-INF\/MANIFEST\.MF/.test(names) || /\.class/.test(names)) return { kind: "jar", label: "Java archive (.jar / .war)", route: "parser" };
   return { kind: "zip", label: "ZIP archive", route: "unsupported", hint: "extract it first, then point REE at the contents" };
 }
 

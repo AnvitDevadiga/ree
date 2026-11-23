@@ -39,6 +39,18 @@ export const JADX: ToolSpec = {
   },
 };
 
+export const VINEFLOWER: ToolSpec = {
+  bin: "vineflower",
+  name: "Vineflower",
+  license: "Apache-2.0",
+  unlocks: "Java JAR/.class decompilation to Java source",
+  install: {
+    darwin: "brew install vineflower",
+    linux: "download vineflower.jar from https://github.com/Vineflower/vineflower/releases and add a 'vineflower' wrapper that runs 'java -jar vineflower.jar \"$@\"' (needs Java 17+)",
+    win32: "download vineflower.jar from https://github.com/Vineflower/vineflower/releases and add a 'vineflower.cmd' wrapper (needs Java 17+)",
+  },
+};
+
 /** Locate an executable on PATH without running it. */
 export function which(bin: string, env: NodeJS.ProcessEnv = process.env): string | null {
   const exts = platform() === "win32" ? (env.PATHEXT ?? ".EXE;.CMD;.BAT").split(";").concat([""]) : [""];
