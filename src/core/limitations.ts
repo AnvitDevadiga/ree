@@ -137,6 +137,15 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
     );
   }
 
+  if (report.findings.some((f) => /obfuscator string array/.test(f.message))) {
+    out.push(
+      "String literals are hidden in an obfuscator string array decoded at runtime. REE does not execute the artifact's decoder, so those strings are not recovered; names and control flow are still analyzed.",
+    );
+  }
+  if (report.findings.some((f) => /XOR\/keystream string decoder/.test(f.message))) {
+    out.push("Some strings are XOR/keystream-encrypted at rest; REE flags the decoder but does not run it, so those strings are not recovered.");
+  }
+
   // Standing limitation.
   out.push("REE is static-only: it never executes the target, so runtime-generated behavior is not observed.");
   return out;

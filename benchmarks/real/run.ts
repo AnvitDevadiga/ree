@@ -24,7 +24,7 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyze } from "../../src/core/analyze.js";
 import { estimateTokens } from "../../src/core/tokens.js";
-import { redactInjections } from "../../src/anti-bla/sanitizer.js";
+import { normalizeLiterals, redactInjections } from "../../src/anti-bla/sanitizer.js";
 import { generateFixtures, generatePyc } from "../fixtures/generate.js";
 import { readFileSync } from "node:fs";
 
@@ -84,7 +84,7 @@ async function scoreReal(path: string, fixture: string): Promise<RealRow> {
     res.report.model.format === "js-bundle" ? estimateTokens(readFileSync(path, "utf8")) : st.estTokensBefore;
   const ree = res.slices.reduce((n, s) => n + s.estTokens, 0);
   let leaks = 0;
-  for (const s of res.slices) leaks += redactInjections(s.content).count;
+  for (const s of res.slices) leaks += redactInjections(normalizeLiterals(s.content).text).count;
   return {
     fixture,
     format: res.report.model.format,

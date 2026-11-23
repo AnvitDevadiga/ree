@@ -156,8 +156,84 @@ export interface SanitizeResult {
   redactedInjections: number;
 }
 
-export function sanitizeBody(unitId: string, name: string, body: string): SanitizeResult {
+/**
+ * Make string literals readable and un-splittable before matching:
+ *  - decode \xNN, \uNNNN and \u{…} escapes of printable characters (obfuscators
+ *    write spaces as \x20, which a model reads fine but a regex does not);
+ *  - fold adjacent literal concatenations ("SYSTEM: ig" + "nore …") into one.
+ * Quotes, backslashes, `$`/backtick in templates, control characters and line
+ * terminators stay escaped, so the code remains valid. This only changes what an
+ * analyzer reads; REE never rewrites the target.
+ */
+export function normalizeLiterals(body: string): { text: string; decoded: number; folded: number } {
+  let decoded = 0;
+  const decode = (lit: string): string => {
+    const q = lit[0]!;
+    const inner = lit.slice(1, -1).replace(/\\(?:x([0-9a-fA-F]{2})|u([0-9a-fA-F]{4})|u\{([0-9a-fA-F]{1,6})\})/g, (m, x, u, cp) => {
+      const code = parseInt(x ?? u ?? cp, 16);
+      const printable = (code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code !== 0x2028 && code !== 0x2029 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff));
+      const ch = String.fromCodePoint(code);
+      if (!printable || ch === q || ch === "\\" || (q === "`" && (ch === "$" || ch === "`"))) return m;
+      decoded++;
+      return ch;
+    });
+    return q + inner + q;
+  };
+  // Pass A: decode escapes inside every string literal.
+  let out = "";
+  let cursor = 0;
+  for (const s of scanJs(body)) {
+    if (s.kind !== "string") continue;
+    const lit = body.slice(s.start, s.end);
+    if (lit.length < 2 || lit[0] !== lit[lit.length - 1]) continue;
+    out += body.slice(cursor, s.start) + decode(lit);
+    cursor = s.end;
+  }
+  out += body.slice(cursor);
+  // Pass B: fold "a" + "b" (plain quotes only, no templates) until stable.
+  let folded = 0;
+  for (let round = 0; round < 8; round++) {
+    let changed = false;
+    const spans = scanJs(out).filter((s) => s.kind === "string");
+    let next = "";
+    let pos = 0;
+    for (let i = 0; i + 1 < spans.length; i++) {
+      const a = spans[i]!;
+      const b = spans[i + 1]!;
+      if (a.start < pos) continue;
+      const between = out.slice(a.end, b.start);
+      const la = out.slice(a.start, a.end);
+      const lb = out.slice(b.start, b.end);
+      if (!/^\s*\+\s*$/.test(between) || la[0] === "`" || lb[0] === "`") continue;
+      const q = la[0]!;
+      const innerB = lb.slice(1, -1).replace(/\\(['"])/g, "$1").replace(new RegExp(q, "g"), `\\${q}`);
+      next += out.slice(pos, a.start) + la.slice(0, -1) + innerB + q;
+      pos = b.end;
+      folded++;
+      changed = true;
+      i++;
+    }
+    out = next + out.slice(pos);
+    if (!changed) break;
+  }
+  return { text: out, decoded, folded };
+}
+
+export function sanitizeBody(unitId: string, name: string, rawBody: string): SanitizeResult {
   const findings: AntiBlaFinding[] = [];
+  // Pass 0: decode escaped / split literals so an obfuscated instruction cannot
+  // slip past the signatures below (e.g. "SYSTEM:\x20ignore\x20previous…").
+  const norm = normalizeLiterals(rawBody);
+  const body = norm.text;
+  if (norm.decoded || norm.folded) {
+    findings.push({
+      pass: "sanitizer",
+      severity: "info",
+      action: "flagged",
+      unitId,
+      message: `normalized string literals in "${name}" for reading: ${norm.decoded} escape(s) decoded, ${norm.folded} split string(s) joined`,
+    });
+  }
   const spans = scanJs(body);
   let out = "";
   let cursor = 0;
@@ -199,8 +275,8 @@ export function sanitizeBody(unitId: string, name: string, body: string): Saniti
     });
   }
 
-  const changed = removedComments > 0 || red.count > 0;
-  return { findings, body: changed ? out : body, redactedInjections: red.count };
+  const changed = removedComments > 0 || red.count > 0 || norm.decoded > 0 || norm.folded > 0;
+  return { findings, body: changed ? out : rawBody, redactedInjections: red.count };
 }
 
 export function sanitizeStrings(strings: ExtractedString[]): { findings: AntiBlaFinding[]; strings: ExtractedString[] } {
@@ -223,6 +299,29 @@ export function sanitizeStrings(strings: ExtractedString[]): { findings: AntiBla
     });
   }
   return { findings, strings: kept };
+}
+
+/**
+ * javascript-obfuscator-style string array: a rotation loop
+ * (`while(!![]){ … parseInt(…) … arr.push(arr.shift()) }`) that reorders an
+ * array of (often base64/rc4-encoded) strings until a checksum matches, read
+ * through a decoder function. Recovering the literals means running that
+ * decoder, which REE never does — so it is reported, not decoded.
+ */
+export function detectStringArray(unitId: string, name: string, body: string): AntiBlaFinding[] {
+  const rotation =
+    /while\s*\(\s*(?:!!\[\]|true|!0)\s*\)/.test(body) &&
+    /parseInt\(/.test(body) &&
+    /(?:\[\s*['"]push['"]\s*\]|\.push)\(\s*[\w$]+(?:\[\s*['"]shift['"]\s*\]|\.shift)\(\)\s*\)/.test(body);
+  if (!rotation) return [];
+  const encoded = /abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\+\/=/.test(body) || /%\s*(?:0x100|256)\b/.test(body);
+  return [{
+    pass: "sanitizer",
+    severity: "suspicious",
+    action: "flagged",
+    unitId,
+    message: `"${name}" contains an obfuscator string array${encoded ? " with encoded (base64/rc4) entries" : ""}; literals are decoded at runtime and REE does not execute decoders, so they stay hidden`,
+  }];
 }
 
 export function detectStringDecoder(unitId: string, name: string, body: string): AntiBlaFinding[] {

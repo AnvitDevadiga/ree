@@ -18,7 +18,7 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { analyze } from "../../src/core/analyze.js";
 import { estimateTokens } from "../../src/core/tokens.js";
-import { redactInjections } from "../../src/anti-bla/sanitizer.js";
+import { normalizeLiterals, redactInjections } from "../../src/anti-bla/sanitizer.js";
 import type { AnalyzeResult } from "../../src/core/analyze.js";
 import { generateFixtures, generatePyc, type Labels } from "../fixtures/generate.js";
 
@@ -53,7 +53,7 @@ function leakCount(res: AnalyzeResult): number {
   // Honest metric: every injection marker that still reaches a context slice,
   // whether it sat in a comment, a string literal, or raw data.
   let leaks = 0;
-  for (const s of res.slices) leaks += redactInjections(s.content).count;
+  for (const s of res.slices) leaks += redactInjections(normalizeLiterals(s.content).text).count;
   return leaks;
 }
 

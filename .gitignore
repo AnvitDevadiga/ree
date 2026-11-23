@@ -11,3 +11,4 @@ benchmarks/reconstruct/.cache/
 benchmarks/reconstruct/results.dryrun.json
 benchmarks/fixtures/.cache/
 benchmarks/pyc/.cache/
+benchmarks/obfuscation/.cache/

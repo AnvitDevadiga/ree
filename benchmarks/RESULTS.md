@@ -1,6 +1,6 @@
 # Counter-BLA benchmark results
 
-Generated 2026-11-23T06:00:51.649Z by `npm run bench`. Token counts are REE's deterministic estimate, not a model tokenizer.
+Generated 2026-11-23T06:10:57.846Z by `npm run bench`. Token counts are REE's deterministic estimate, not a model tokenizer.
 Hardened fixtures are produced by REE's own simulator of BLA's documented techniques, not by bla-agents.
 
 | fixture | variant | format | naive tokens | REE tokens | reduction | real recall | decoys removed | exhaust contained | injection leaks |

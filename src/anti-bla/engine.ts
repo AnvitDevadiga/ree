@@ -17,7 +17,7 @@ import { analyzeReachability, keepReachable } from "./reachability.js";
 import { DEFAULT_THRESHOLDS, detectContextBombs, elideBombLiterals, type BombThresholds } from "./context-bomb.js";
 import { DEFAULT_DECOY_THRESHOLDS, detectDecoyFamilies, type DecoyFamilyThresholds } from "./decoy-family.js";
 import { foldOpaquePredicates } from "./opaque-predicates.js";
-import { detectStringDecoder, redactInjections, sanitizeBody, sanitizeStrings } from "./sanitizer.js";
+import { detectStringArray, detectStringDecoder, redactInjections, sanitizeBody, sanitizeStrings } from "./sanitizer.js";
 
 export interface EngineOptions {
   foldPredicates?: boolean;
@@ -80,6 +80,7 @@ export function runAntiBla(model: ArtifactModel, options: EngineOptions = {}): A
     for (const u of units) {
       if (!u.body || (u.meta as { listing?: boolean }).listing) continue;
       findings.push(...detectStringDecoder(u.id, u.name, u.body));
+      findings.push(...detectStringArray(u.id, u.name, u.body));
       const res = sanitizeBody(u.id, u.name, u.body);
       findings.push(...res.findings);
       stringsSanitized += res.findings.filter((f) => f.action === "sanitized").length;
