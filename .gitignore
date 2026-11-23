@@ -9,3 +9,4 @@ coverage/
 benchmarks/fixtures/out/
 benchmarks/reconstruct/.cache/
 benchmarks/reconstruct/results.dryrun.json
+benchmarks/fixtures/.cache/

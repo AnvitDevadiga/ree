@@ -13,8 +13,9 @@ import { JsBundleParser } from "./js-bundle.js";
 import { WasmParser } from "./wasm.js";
 import { PycParser } from "./pyc.js";
 import { NativeParser } from "./native.js";
+import { ApkParser } from "./apk.js";
 
-export { AsarParser, JsBundleParser, WasmParser, PycParser, NativeParser };
+export { AsarParser, JsBundleParser, WasmParser, PycParser, NativeParser, ApkParser };
 
 export interface IngestOptions {
   /** Max bytes REE will read; larger files are rejected, never silently truncated. */
@@ -26,7 +27,7 @@ const DEFAULT_MAX_BYTES = 512 * 1024 * 1024;
 
 /** Order matters: magic-number formats first, JS (text sniffing) next, native last. */
 export function defaultParsers(): Parser[] {
-  return [new AsarParser(), new WasmParser(), new PycParser(), new NativeParser(), new JsBundleParser()];
+  return [new AsarParser(), new WasmParser(), new PycParser(), new ApkParser(), new NativeParser(), new JsBundleParser()];
 }
 
 export async function ingest(path: string, opts: IngestOptions = {}): Promise<ArtifactModel> {

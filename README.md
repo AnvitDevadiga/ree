@@ -234,6 +234,7 @@ Each pass exists because the one before it can't finish the job:
 | **WebAssembly** | All sections, `name` section, element segments | ✅ | ✅ | WAT-style listing |
 | **Python `.pyc`** (3.7 – 3.14) | Full marshal decoder, per-version code-object layouts | — | safe default | params, names, consts |
 | **ELF / Mach-O / PE** | Headers, sections, symbols, imports, exports, strings | — | safe default | symbol and import summary |
+| **Android APK / AAB** | Bounded ZIP + binary-manifest reader: package, components, permissions, DEX class counts, native libs; bundled React Native / Cordova JS fully analyzed. App classes decompiled to Java with the optional **jadx** | — | safe default | app classes (Java), bundled JS; libraries summarized |
 | **`.dmg` / `.app`** | Read-only mount, bundle walk, routes inner artifacts | per artifact | per artifact | one report per artifact |
 
 ## ⌨️ CLI

@@ -87,6 +87,19 @@ program
       console.log();
       console.log(`pruned ${s.unitsPruned}  quarantined ${s.unitsQuarantined}  sanitized ${s.stringsSanitized}  ${green(`token reduction ${pct(s.estTokensBefore, s.estTokensAfter)}`)}`);
       console.log(`entry points: ${report.model.entryPoints.map((e) => cyan(e.detail ?? e.unitId)).join(", ") || dim("(none)")}`);
+      if (report.model.format === "apk") {
+        const m = report.model.meta as Record<string, unknown>;
+        const line = (k: string, v: unknown) => v !== undefined && v !== "" && console.log(`${dim(k.padEnd(14))} ${Array.isArray(v) ? v.join(", ") || "(none)" : String(v)}`);
+        console.log(bold("\nandroid app"));
+        line("package", `${m.package ?? "?"}${m.versionName ? ` ${m.versionName}` : ""} (${m.container})`);
+        line("launcher", m.launcher);
+        line("components", `${m.components} declared, ${m.exportedComponents} exported`);
+        line("permissions", m.permissions);
+        line("code", `${m.dexFiles} DEX file(s), ${m.classDefs} classes${m.decompiler === "jadx" ? ` — ${m.appClasses} app classes decompiled, ${m.libraryClasses} library classes summarized` : " — not decompiled (jadx not installed)"}`);
+        line("libraries", m.topLibraries);
+        line("native libs", Number(m.nativeLibs) ? `${m.nativeLibs} (${(m.abis as string[]).join(", ")})` : undefined);
+        line("bundled JS", Number(m.jsBundles) ? `${m.jsBundles} file(s)${Number(m.hermesBundles) ? `, ${m.hermesBundles} Hermes` : ""}` : undefined);
+      }
       if (report.model.warnings.length) {
         console.log(dim(`\nwarnings:`));
         for (const w of report.model.warnings.slice(0, 10)) console.log(dim(`  - ${w}`));

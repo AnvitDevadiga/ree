@@ -25,7 +25,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "npm run clean && npm run build && npm test",
     "bench:real": "tsx benchmarks/real/run.ts",
-    "bench:reconstruct": "tsx benchmarks/reconstruct/run.ts"
+    "bench:reconstruct": "tsx benchmarks/reconstruct/run.ts",
+    "fixtures:android": "tsx benchmarks/fixtures/fetch-android.ts"
   },
   "files": [
     "dist",

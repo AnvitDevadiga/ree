@@ -52,6 +52,12 @@ test("detect: Java class vs universal Mach-O share 0xCAFEBABE", () => {
   assert.equal(classify(fat, fat).kind, "macho");
 });
 
+test("detect: APK and AAB are routed to the APK parser", () => {
+  const z = (names: string) => classify(Buffer.from("PK\x03\x04", "latin1"), Buffer.from(names, "latin1"));
+  assert.equal(z("AndroidManifest.xml classes.dex").route, "parser");
+  assert.equal(z("base/manifest/AndroidManifest.xml base/dex/classes.dex").route, "parser");
+});
+
 test("detect: ZIP-based formats are told apart by their entry names", () => {
   const zip = (names: string) => [Buffer.from("PK\x03\x04rest", "latin1"), Buffer.from(`...${names}...PK\x05\x06`, "latin1")] as const;
   const kind = (names: string) => classify(...zip(names)).kind;
@@ -74,9 +80,9 @@ test("detect: directories route to the app front-end; .dmg by its koly trailer",
 });
 
 test("detect: unsupported message names the format, gives a hint, and lists what works", () => {
-  const msg = unsupportedMessage("x.apk", classify(Buffer.from("PK\x03\x04", "latin1"), Buffer.from("AndroidManifest.xml classes.dex", "latin1")));
-  assert.match(msg, /Android APK/);
-  assert.match(msg, /jadx/);
+  const msg = unsupportedMessage("x.ipa", classify(Buffer.from("PK\x03\x04", "latin1"), Buffer.from("Payload/App.app/Info.plist", "latin1")));
+  assert.match(msg, /iOS app archive/);
+  assert.match(msg, /unencrypted builds is planned/);
   assert.match(msg, /Supported today:/);
   assert.match(msg, /Electron \.asar/);
 });

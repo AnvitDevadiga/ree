@@ -55,6 +55,7 @@ export const SUPPORTED_SUMMARY = [
   "WebAssembly (.wasm)",
   "Python bytecode (.pyc, 3.7–3.14; structure only)",
   "ELF, Mach-O (incl. universal) and PE binaries (structure only)",
+  "Android APK / AAB (manifest, DEX and bundled JS always; Java source with optional jadx)",
   "macOS .dmg images (macOS only) and .app bundles / extracted app directories",
 ];
 
@@ -131,8 +132,8 @@ export function classify(head: Uint8Array, tail: Uint8Array, path = ""): Detecti
 function classifyZip(tail: Uint8Array): Detection {
   // The central directory (with every entry name in plain text) sits at the end.
   const names = Buffer.from(tail).toString("latin1");
-  if (/base\/manifest\/AndroidManifest\.xml/.test(names)) return { kind: "aab", label: "Android App Bundle (.aab)", route: "unsupported", hint: "Android support (via the optional jadx decompiler) is planned" };
-  if (/AndroidManifest\.xml/.test(names) && /classes\d*\.dex/.test(names)) return { kind: "apk", label: "Android APK", route: "unsupported", hint: "Android support (via the optional jadx decompiler) is planned" };
+  if (/base\/manifest\/AndroidManifest\.xml/.test(names)) return { kind: "aab", label: "Android App Bundle (.aab)", route: "parser" };
+  if (/AndroidManifest\.xml/.test(names) && /classes\d*\.dex/.test(names)) return { kind: "apk", label: "Android APK", route: "parser" };
   if (/Payload\/[^/]+\.app\//.test(names)) return { kind: "ipa", label: "iOS app archive (.ipa)", route: "unsupported", hint: "structure-only .ipa support for unencrypted builds is planned" };
   if (/META-INF\/MANIFEST\.MF/.test(names) || /\.class/.test(names)) return { kind: "jar", label: "Java archive (.jar)", route: "unsupported", hint: "Java support (via an optional decompiler) is planned" };
   return { kind: "zip", label: "ZIP archive", route: "unsupported", hint: "extract it first, then point REE at the contents" };

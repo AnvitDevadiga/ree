@@ -36,6 +36,27 @@ export function deriveLimitations(report: AntiBlaReport): string[] {
       "Python bytecode: code objects, names and constants are recovered, but there is no bytecode-level call graph, so nothing is pruned.",
     );
   }
+  if (fmt === "apk") {
+    const m = model.meta as {
+      decompiler?: string; jadxInstall?: string; classDefs?: number; appClasses?: number; libraryClasses?: number;
+      decompileErrors?: number; hermesBundles?: number; nativeLibs?: number; package?: string; container?: string;
+    };
+    if (m.decompiler !== "jadx") {
+      out.push(
+        `Java/Kotlin code was not decompiled (${m.classDefs ?? 0} classes in DEX): jadx is not installed. Install it to unlock source-level analysis: ${m.jadxInstall ?? "see 'ree doctor'"}.`,
+      );
+    } else {
+      out.push(
+        `Decompiled with jadx; Kotlin appears as Java and decompiler output can be inexact${m.decompileErrors ? ` (${m.decompileErrors} class(es) only partially decompiled)` : ""}.`,
+      );
+      if (m.libraryClasses) {
+        out.push(`${m.libraryClasses} third-party library classes were counted but not analyzed; only the app's own ${m.appClasses ?? 0} classes${m.package ? ` (under ${m.package})` : ""} are in scope.`);
+      }
+    }
+    if (!m.package) out.push("The app's package could not be read from the manifest, so app code could not be separated from library code.");
+    if (m.hermesBundles) out.push(`${m.hermesBundles} React Native bundle(s) are Hermes bytecode; REE does not decompile Hermes.`);
+    if (m.nativeLibs) out.push(`${m.nativeLibs} native library file(s) (.so) were listed but not analyzed; run 'ree analyze' on an extracted .so for its structure.`);
+  }
   if (fmt === "wasm") {
     out.push("WASM is decoded to a WAT-style listing; high-level types and names beyond the name section are not recovered.");
   }
