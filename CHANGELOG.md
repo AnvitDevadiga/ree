@@ -3,6 +3,66 @@
 All notable changes to REE are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] — 2026-11-23
+
+REE now understands most of what ships: Android, Java, .NET, native, Python and iOS
+alongside JavaScript, Electron and WebAssembly. It installs and runs with one `npx`
+command on macOS, Linux and Windows.
+
+### Breaking
+
+- **Node 22 or newer is required** (`engines.node >= 22`). Node 20 is no longer
+  tested or supported.
+- `ree analyze` now detects the format from content and routes `.dmg`, `.app` and
+  directories to whole-app analysis. Unsupported input exits with code 2 and a
+  message listing supported formats, instead of being guessed.
+
+### Added
+
+- **Formats:** Android APK/AAB (bounded ZIP + binary-manifest reader), Java JAR and
+  `.class`, .NET assemblies (ECMA-335 metadata reader), iOS `.ipa` (structure only;
+  encrypted App Store binaries are detected and reported, never decrypted).
+- **Optional decompilers, detected at runtime and never bundled:** jadx (APK),
+  Vineflower (JAR), ilspycmd (.NET), Ghidra headless (ELF/Mach-O/PE → C per function
+  plus call graph), pycdc and uncompyle6 (`.pyc`). Missing tools print an exact install
+  command; a tool that is installed but crashes is reported as failed, not missing.
+  All tool output is treated as untrusted and cleaned like any other input.
+- **Model providers:** any OpenAI-compatible API (Groq, local Ollama/LM Studio/vLLM)
+  next to Anthropic; a deterministic-only mode when none is configured; a required
+  spending cap with worst-case pre-pricing; rate-limit pacing from provider headers.
+- `ree demo` — analyzes two bundled open-source samples, no setup.
+- `ree doctor` — Node version, installed tools and what each missing one unlocks,
+  provider status (never prints a key).
+- Benchmarks: `bench:reconstruct` (reconstruction vs. real source, behavioral
+  probes), `bench:obfuscation` (Terser, javascript-obfuscator ×3, R8; CI gate),
+  `bench:pyc` (Python decompilers 3.8–3.14). Write-ups in `docs/eval/`.
+- Packaging: bundled `samples/`, `npm run smoke:pack` (packs, installs into an empty
+  directory, runs the CLI), CI on macOS, Linux and Windows.
+
+### Fixed
+
+- **Security — injection filter evasion:** instructions hidden with `\xNN`/`\u`
+  escapes or split across concatenated strings bypassed the sanitizer. Escapes are
+  now decoded and fragments joined before matching; metadata summaries and MCP
+  results are redacted too.
+- **Webpack bundles:** code outside the module registry (93% of a real BLA-hardened
+  bundle) was silently ignored; it is now modeled and cleaned, and large module
+  factories are split per function. The reported reduction drops from 91.8% to an
+  honest 43.9%.
+- **Real code discarded with decoys:** units mixing generated filler with real logic
+  are split at statement level, so real code is kept (Electron 90% → 80.1%, Node CLI
+  65.8% → 41.7% reduction, with the real entry points now preserved).
+- esbuild/rollup/UMD bundles were one opaque slice; wrappers are now unwrapped and
+  same-file units packed into reconstruction-sized slices.
+- Verifier verdicts written in Markdown were ignored; reconstructions could ship with
+  a stray code fence.
+- `.NET` generic types (``Foo`2``) now map to their decompiled file.
+
+### Changed
+
+- README rewritten around understanding, studying and auditing software, with a
+  responsible-use section, a supported-formats table and honest benchmark numbers.
+
 ## [1.0.1] — 2026-11-15
 
 ### Fixed

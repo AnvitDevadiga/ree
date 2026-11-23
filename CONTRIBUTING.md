@@ -22,7 +22,9 @@ npm run bench           # synthetic fixtures, offline
 npm run bench:real      # real bla-agents; needs network, exits non-zero on any leak
 ```
 
-Node 20 or newer. CI runs the suite on Node 22 and 24 plus the real-adversary gate.
+Node 22 or newer. CI runs the suite on macOS, Linux and Windows (Node 22 and 24), plus the real-adversary gate, the protection gates (`npm run bench:obfuscation`) and the packaging smoke test (`npm run smoke:pack`).
+
+Optional decompilers (jadx, Vineflower, ilspycmd, Ghidra, pycdc, uncompyle6) are never required; tests that need one skip when it is missing. `npx tsx src/cli/index.ts doctor` shows what you have. A new tool integration must have a license compatible with MIT, recorded in `THIRD_PARTY_NOTICES.md`, run as a separate process with a timeout, and pass its output through the sanitizer.
 
 ## Ground rules for changes
 
@@ -34,7 +36,7 @@ Node 20 or newer. CI runs the suite on Node 22 and 24 plus the real-adversary ga
 
 ## Pull requests
 
-Keep them focused, describe what changed and why, and include tests. Run `npm run typecheck && npm test` before pushing.
+Keep them focused, describe what changed and why, and include tests. Run `npm run typecheck && npm test && npm run bench:real` before pushing.
 
 ## Scope
 

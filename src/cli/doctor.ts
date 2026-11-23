@@ -53,7 +53,7 @@ export interface DoctorReport {
   provider: { kind: string; note: string; error?: string };
 }
 
-export function runDoctor(env: NodeJS.ProcessEnv = process.env, required = ">=20"): DoctorReport {
+export function runDoctor(env: NodeJS.ProcessEnv = process.env, required = ">=22"): DoctorReport {
   const major = Number(process.versions.node.split(".")[0]);
   const min = Number(/\d+/.exec(required)?.[0] ?? 20);
   const plat = platform();

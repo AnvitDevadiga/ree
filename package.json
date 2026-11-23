@@ -1,7 +1,7 @@
 {
   "name": "ree-reverse-engineer-everything",
-  "version": "1.0.1",
-  "description": "REE — a budget-safe, multi-format reverse-engineering framework with a deterministic de-obfuscation (anti-BLA) pre-pass and an MCP server for AI analysis agents.",
+  "version": "2.0.0",
+  "description": "REE — understand how software works. Static, decoy-resistant analysis of apps and binaries (Electron, JS, WASM, Android, Java, .NET, native, Python, iOS) that gives AI models a clean, honest view of the code. CLI + MCP server.",
   "type": "module",
   "bin": {
     "ree": "./dist/cli/index.js"
@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -w -p tsconfig.json",
-    "clean": "rm -rf dist",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "cli": "node --enable-source-maps dist/cli/index.js",
     "mcp": "node --enable-source-maps dist/mcp/server.js",
     "bench": "tsx benchmarks/harness/run.ts",
@@ -32,28 +32,44 @@
     "fixtures:native": "tsx benchmarks/fixtures/native.ts",
     "bench:pyc": "tsx benchmarks/pyc/evaluate.ts",
     "fixtures:ios": "tsx benchmarks/fixtures/ios.ts",
-    "bench:obfuscation": "tsx benchmarks/obfuscation/run.ts"
+    "bench:obfuscation": "tsx benchmarks/obfuscation/run.ts",
+    "smoke:pack": "node scripts/smoke-pack.mjs",
+    "prepack": "npm run clean && npm run build"
   },
   "files": [
     "dist",
+    "samples",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "CHANGELOG.md"
   ],
   "keywords": [
-    "reverse-engineering",
+    "ai-agents",
+    "android",
+    "apk",
+    "asar",
     "decompiler",
     "deobfuscation",
-    "static-analysis",
+    "dotnet",
+    "electron",
+    "elf",
+    "ghidra",
+    "ipa",
+    "jar",
+    "llm-security",
     "mcp",
     "model-context-protocol",
-    "wasm",
-    "asar",
-    "elf",
-    "security-research"
+    "prompt-injection",
+    "pyc",
+    "reverse-engineering",
+    "security-research",
+    "static-analysis",
+    "wasm"
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
@@ -70,5 +86,13 @@
     "terser": "^5.51.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnvitDevadiga/ree.git"
+  },
+  "homepage": "https://github.com/AnvitDevadiga/ree#readme",
+  "bugs": {
+    "url": "https://github.com/AnvitDevadiga/ree/issues"
   }
 }

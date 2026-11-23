@@ -18,9 +18,14 @@ Please don't post exploit details in a public issue.
 
 ### What to include
 
-The artifact format, a minimal sample you generated yourself, the REE version (`git rev-parse HEAD`), and the command you ran.
+The artifact format, a minimal sample you generated yourself, the REE version (`ree --version`, or `git rev-parse HEAD` from a checkout), and the command you ran.
 
 ## Supported versions
+
+| Version | Supported |
+|---|:-:|
+| 2.x | ✅ |
+| 1.x | ❌ — upgrade to 2.x |
 
 Fixes land on `main` and in the latest release.
 

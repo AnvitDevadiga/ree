@@ -5,6 +5,13 @@ optional external program that REE detects on `PATH` at runtime and invokes as
 a separate process. Install them yourself (`ree doctor` prints the command).
 Licenses were checked for compatibility with MIT before integration.
 
+## Bundled sample (redistributed in the npm package)
+
+| File | Contents | License |
+|---|---|---|
+| `samples/hardened-app.asar` | Written for this repo; hardened by REE's own simulator | MIT (REE) |
+| `samples/escape-dlv.min.js` | Minified build of escape-html 1.0.3 (© 2012-2013 TJ Holowaychuk, © 2015 Andreas Lubbe, © 2015 Tiancheng "Timothy" Gu) and dlv 1.1.3 (© Jason Miller) | MIT — full notice in `samples/README.md` |
+
 ## Optional external tools
 
 | Tool | Used for | License | Project |

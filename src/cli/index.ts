@@ -13,6 +13,9 @@ import { writeFile } from "node:fs/promises";
 import { Command } from "commander";
 import { analyze } from "../core/analyze.js";
 import { createRequire } from "node:module";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { analyzeApp, PlatformUnsupportedError } from "../apps/dmg.js";
 import { detectFormat, unsupportedMessage, SUPPORTED_SUMMARY, type Detection } from "../core/detect.js";
 import { runDoctor } from "./doctor.js";
@@ -220,12 +223,43 @@ program
   });
 
 program
+  .command("demo")
+  .description("analyze REE's bundled sample artifacts — a result in seconds, no setup")
+  .action(async () => {
+    const samples = fileURLToPath(new URL("../../samples/", import.meta.url));
+    const app = join(samples, "hardened-app.asar");
+    const bundle = join(samples, "escape-dlv.min.js");
+    if (!existsSync(app)) {
+      console.error(`ree: bundled samples not found at ${samples}`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(bold("\nREE demo — a hardened Electron app (samples/hardened-app.asar)"));
+    console.log(dim("It was built to mislead AI analysts: decoy modules, a filler blob, and planted instructions.\n"));
+    const a = await analyze(app);
+    const s = a.report.stats;
+    const by = (pass: string, action?: string) => a.report.findings.filter((f) => f.pass === pass && (!action || f.action === action)).length;
+    console.log(`${green("✓")} ${s.unitsIn} files parsed, ${s.unitsOut} kept for analysis`);
+    console.log(`${green("✓")} ${s.unitsPruned} unreachable decoy file(s) pruned, ${s.unitsQuarantined} quarantined`);
+    console.log(`${green("✓")} ${by("sanitizer", "sanitized")} planted instruction(s) removed before any model sees the code`);
+    console.log(`${green("✓")} entry points: ${a.report.model.entryPoints.map((e) => e.detail ?? e.unitId).join(", ")}`);
+    console.log(`${green("✓")} context for a model: ${s.estTokensBefore} → ${s.estTokensAfter} tokens (${pct(s.estTokensBefore, s.estTokensAfter)} smaller)`);
+    const b = await analyze(bundle);
+    console.log(bold("\nA minified bundle (samples/escape-dlv.min.js — escape-html + dlv, MIT)"));
+    console.log(`${green("✓")} ${b.report.model.units.filter((u) => u.kind === "function").length} functions recovered from one minified line; names mangled → ${b.report.model.units.filter((u) => u.kind === "function").map((u) => u.name).join(", ")}`);
+    console.log(dim("\nNext:"));
+    console.log(`  ree analyze <your-file>        ${dim("any supported format — detected from content")}`);
+    console.log(`  ree analyze <file> --reconstruct --dry-run   ${dim("see exactly what a model would receive")}`);
+    console.log(`  ree doctor                     ${dim("which optional decompilers are installed")}`);
+  });
+
+program
   .command("doctor")
   .description("check Node, optional external tools, and model-provider setup")
   .option("--json", "emit machine-readable JSON")
   .action((opts) => {
     const pkg = createRequire(import.meta.url)("../../package.json") as { version: string; engines?: { node?: string } };
-    const r = runDoctor(process.env, pkg.engines?.node ?? ">=20");
+    const r = runDoctor(process.env, pkg.engines?.node ?? ">=22");
     if (opts.json) {
       console.log(JSON.stringify({ ree: pkg.version, ...r }, null, 2));
       return;

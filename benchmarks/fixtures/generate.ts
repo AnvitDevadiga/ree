@@ -473,10 +473,14 @@ export function generatePyc(outDir: string): string | null {
     `import json\n\nclass Ledger:\n    def __init__(self, owner):\n        self.owner = owner\n        self.rows = []\n\n    def add(self, label, amount):\n        self.rows.append((label, amount))\n\n    def total(self):\n        return sum(a for _, a in self.rows)\n\n\ndef render(ledger, currency="USD"):\n    return json.dumps({"owner": ledger.owner, "total": ledger.total(), "currency": currency})\n\n\nasync def fetch_rates(base):\n    return {"base": base}\n\n\nif __name__ == "__main__":\n    l = Ledger("ops")\n    l.add("rent", 1200)\n    print(render(l))\n`,
   );
   const outPath = join(outDir, "tool.pyc");
-  try {
-    execFileSync("python3", ["-I", "-c", "import py_compile,sys; py_compile.compile(sys.argv[1], cfile=sys.argv[2], doraise=True)", srcPath, outPath], { stdio: "pipe" });
-    return outPath;
-  } catch {
-    return null;
+  // `python3` on macOS/Linux; Windows installs usually provide `python` (or `py`).
+  for (const py of ["python3", "python", "py"]) {
+    try {
+      execFileSync(py, ["-I", "-c", "import py_compile,sys; py_compile.compile(sys.argv[1], cfile=sys.argv[2], doraise=True)", srcPath, outPath], { stdio: "pipe" });
+      return outPath;
+    } catch {
+      /* try the next name */
+    }
   }
+  return null;
 }

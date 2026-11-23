@@ -1,158 +1,239 @@
 <div align="center">
 
-<img src="docs/assets/banner.svg" alt="REE — Reverse Engineer Everything: decoy-resistant, budget-safe reverse engineering for AI agents" width="100%" />
+<img src="docs/assets/banner.svg" alt="REE — Reverse Engineer Everything: understand how software works, with an AI that sees clean, honest code" width="100%" />
 
 <br />
 
 [![CI](https://img.shields.io/github/actions/workflow/status/AnvitDevadiga/ree/ci.yml?branch=main&style=flat-square&label=CI&logo=githubactions&logoColor=white)](https://github.com/AnvitDevadiga/ree/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/AnvitDevadiga/ree?style=flat-square&color=818cf8&logo=github)](https://github.com/AnvitDevadiga/ree/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-22d3ee?style=flat-square)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%E2%89%A5%2020-339933?style=flat-square&logo=nodedotjs&logoColor=white)](package.json)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square&logo=typescript&logoColor=white)](tsconfig.json)
+[![Node](https://img.shields.io/badge/node-%E2%89%A5%2022-339933?style=flat-square&logo=nodedotjs&logoColor=white)](package.json)
+[![Platforms](https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-tested-0ea5e9?style=flat-square)](.github/workflows/ci.yml)
 [![MCP](https://img.shields.io/badge/MCP-4%20tools-e879f9?style=flat-square)](#-mcp-server)
-[![Injection leaks](https://img.shields.io/badge/injection%20leaks%20vs%20real%20bla--agents-0-22c55e?style=flat-square)](#-results)
+[![Injection leaks](https://img.shields.io/badge/injection%20leaks-0-22c55e?style=flat-square)](#-results)
 [![Stars](https://img.shields.io/github/stars/AnvitDevadiga/ree?style=flat-square&color=f59e0b&logo=github)](https://github.com/AnvitDevadiga/ree/stargazers)
 
-**[Quick start](#-quick-start)** · **[Results](#-results)** · **[How it works](#-how-it-works)** · **[Defense matrix](#-defense-matrix)** · **[CLI](#-cli)** · **[MCP server](#-mcp-server)** · **[Benchmarks](#-benchmarks)** · **[Limitations](#-limitations-and-roadmap)**
+**[Try it](#-try-it-in-30-seconds)** · **[Demo](#-demo)** · **[Formats](#-supported-formats)** · **[Results](#-results)** · **[How it works](#-how-it-works)** · **[CLI](#-cli)** · **[MCP](#-mcp-server)** · **[Limitations](#-limitations)** · **[Responsible use](#-responsible-use)**
 
 </div>
 
 ---
 
-**REE puts a deterministic static-analysis pass in front of the LLM.** Decoys, context bombs, and planted instructions are stripped *before* a model reads a single token — so a hardened build can't poison, exhaust, or mislead your analysis agent.
+**REE helps you understand how software works** — Electron apps, JavaScript bundles, WebAssembly, Android apps, Java, .NET, native binaries, Python bytecode and iOS bundles. It reads an artifact **statically** (it never runs it), cleans out anything planted to mislead an analyst — decoy code, filler, instructions aimed at AI models — and gives you, and optionally an AI model, a small, honest view of what the code actually does. Use it to **study, audit and learn**: inspect a dependency you ship, audit your own release, analyze malware, or see how an open-source app is built.
+
+## ⚡ Try it in 30 seconds
 
 ```bash
-ree analyze ./app.asar      # no LLM, no execution — just a clean, auditable model of the artifact
+npx ree-reverse-engineer-everything demo                     # bundled samples, no setup
+npx ree-reverse-engineer-everything analyze ./your-file      # any supported format, detected from content
 ```
 
+Needs Node 22+. Nothing else: optional decompilers add more depth when installed (`ree doctor` shows what you have).
+
+## 🧭 Responsible use
+
 > [!IMPORTANT]
-> **Responsible use.** REE is for security research, malware analysis, interoperability work, auditing your own software and dependencies, and CTFs. Only analyze software you own or are explicitly authorized to analyze, and follow applicable law and license terms (including anti-circumvention rules in your jurisdiction). REE is a static analyzer: it never executes the target.
+> - **REE is static-only.** It reads files; it never executes, installs or runs what it analyzes. `.dmg` images are mounted read-only.
+> - **You are responsible for complying with the licenses and laws that apply to what you analyze**, including terms of service and anti-circumvention rules in your jurisdiction. Analyze software you own, are authorized to study, or that is open source.
+> - **Learning from proprietary software is fine; copying it is not.** Study how something works, then write your own code. Don't paste recovered proprietary code into your product.
+> - **Open-source code may be reused only under its license** — keep attribution for MIT/Apache, and honor copyleft for GPL.
+> - **REE produces understanding, not modified binaries.** It never decrypts App Store apps, removes license checks, re-signs or repackages anything.
 
-## 🧭 Why REE exists
+## 🎬 Demo
 
-AI reverse-engineering agents ([REA](https://github.com/morluto/rea)) showed that a model with the right tools can reconstruct real applications. Anti-LLM hardening ([BLA](https://github.com/qybaihe/bla)) showed how fragile that is: when a raw artifact goes into the context window, **the artifact controls what the model sees.**
+A minified bundle goes in; readable source comes out. Below is a real run — the input is
+[`samples/escape-dlv.min.js`](samples/escape-dlv.min.js) (escape-html + dlv, MIT), the output is
+what REE's reconstruction pipeline produced with **`openai/gpt-oss-120b` on Groq** (not a Claude
+model), and the last column is the real original source.
 
 <table>
-<tr>
-<td width="33%" valign="top">
+<tr><th>What ships (minified)</th><th>What REE reconstructed</th><th>The real source</th></tr>
+<tr valign="top">
+<td>
 
-### ☠️ Poison
-Decoy functions, shadow state machines, opaque-predicate-guarded dead code, honey source maps.
-
-**REE:** folds the predicates, prunes what's unreachable, and clusters away clone families.
+```js
+function A(r){var t=""+r,e=w.exec(t);
+if(!e)return t;var a,s="",c=0,i=0;
+for(c=e.index;c<t.length;c++){
+switch(t.charCodeAt(c)){
+case 34:a="&quot;";break;
+case 38:a="&amp;";break;
+case 39:a="&#39;";break;
+case 60:a="&lt;";break;
+case 62:a="&gt;";break;
+default:continue}
+i!==c&&(s+=t.substring(i,c)),
+i=c+1,s+=a}
+return i!==c?s+t.substring(i,c):s}
+```
 
 </td>
-<td width="33%" valign="top">
+<td>
 
-### 💣 Exhaust
-Inflated headers, thousands of decoy files, filler tables, packed blobs that burn the token budget.
-
-**REE:** hard parser limits, mass-chaff quarantine, entropy scoring, per-literal elision.
+```js
+function escapeHtml(input) {
+  const str = '' + input;
+  const firstMatch = /["'&<>]/.exec(str);
+  if (!firstMatch) return str;
+  let result = '';
+  let last = 0;
+  for (let i = firstMatch.index; i < str.length; i++) {
+    let entity;
+    switch (str.charCodeAt(i)) {
+      case 34: entity = '&quot;'; break;
+      case 38: entity = '&amp;';  break;
+      case 39: entity = '&#39;';  break;
+      case 60: entity = '&lt;';   break;
+      case 62: entity = '&gt;';   break;
+      default: continue;
+    }
+    if (last !== i) result += str.substring(last, i);
+    result += entity;
+    last = i + 1;
+  }
+  if (last !== str.length) result += str.substring(last);
+  return result;
+}
+```
 
 </td>
-<td width="33%" valign="top">
+<td>
 
-### 🎭 Hallucinate
-Fake `<system-reminder>` tags, ChatML frames, and refusal scripts planted in strings and comments.
-
-**REE:** redacts them in place. Zero reach the model.
+```js
+function escapeHtml(string) {
+  var str = '' + string;
+  var match = matchHtmlRegExp.exec(str);
+  if (!match) return str;
+  var escape, html = '';
+  var index = 0, lastIndex = 0;
+  for (index = match.index; index < str.length; index++) {
+    switch (str.charCodeAt(index)) {
+      case 34: escape = '&quot;'; break;
+      case 38: escape = '&amp;';  break;
+      case 39: escape = '&#39;';  break;
+      case 60: escape = '&lt;';   break;
+      case 62: escape = '&gt;';   break;
+      default: continue;
+    }
+    if (lastIndex !== index) html += str.substring(lastIndex, index);
+    lastIndex = index + 1;
+    html += escape;
+  }
+  return lastIndex !== index
+    ? html + str.substring(lastIndex, index) : html;
+}
+```
 
 </td>
 </tr>
 </table>
 
-REE's answer is architectural: **an LLM never reads a raw artifact.** Parsers build a structural model, the anti-BLA engine removes everything that isn't reachable, real, and inert, and only budget-bounded slices of what's left ever reach a model.
+The model recovered the real name (`escapeHtml`, minified to `A`) and the function passed every
+behavioral probe. That is one good run, not a guarantee — see the [reconstruction benchmark](#reconstruction-quality)
+for failures too. (Formatting of the middle and right columns is condensed here to fit.)
+
+## 📦 Supported formats
+
+`ree analyze` detects the format from the file's content, not its name.
+
+| Format | Always (no tools needed) | Optional tool → what it unlocks | Platforms |
+|---|---|---|---|
+| **Electron `.asar`** | file tree, entry points (incl. preload/renderer/HTML), full JS analysis | — | all |
+| **JavaScript** (webpack, esbuild, rollup, UMD, plain) | function-level units, call graph, runtime code, decoy cleaning | — | all |
+| **WebAssembly** | all sections, decoded WAT, exact call graph | — | all |
+| **Android APK / AAB** | manifest (package, components, permissions), DEX class counts, native libs, bundled React Native / Cordova JS | **jadx** → app classes as Java | all |
+| **Java JAR / `.class`** | every class's fields, method signatures and references, `Main-Class` | **Vineflower** → Java source | all |
+| **.NET** `.dll` / `.exe` | types, methods with parameter names, dependencies, P/Invoke, entry point, string literals | **ilspycmd** → C# source | all |
+| **Native** ELF / Mach-O / PE | headers, symbols, imports, exports, strings | **Ghidra** (headless) → C per function + call graph | all |
+| **Python `.pyc`** (3.7–3.14) | code objects, names, constants, parameters | **uncompyle6** (≤ 3.8) / **pycdc** (3.9–3.12, partial) → Python source | all |
+| **iOS `.ipa`** | bundle identity, permissions, URL schemes, frameworks, bundled JS, unencrypted executable structure — **encrypted App Store binaries are detected, never decrypted** | — | all |
+| **`.dmg` / `.app` / directories** | walks the bundle and analyzes every inner artifact | **hdiutil** → `.dmg` mounting | `.dmg`: macOS |
+
+Every tool is optional, detected at runtime, never bundled, and treated as **untrusted**: its output
+passes through the same cleaning as everything else. `ree doctor` lists what's installed and the exact
+command for anything missing. Licenses: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## 📊 Results
 
-Measured against the **real published `bla-agents@3.3.2`** at its worst-case setting (`--intensity bankrupt --llm-directives`). No LLM calls. Reproduce with `npm run bench:real`; the same check runs in CI on every push.
+Every number here is reproducible with the command shown, and the gates run in CI.
 
-| Target | Tokens an agent would read | After REE | Reduction | Decoy units removed | Injection leaks |
+### Reconstruction quality
+
+Four small open-source projects, rebuilt with REE's full pipeline and compared with the real source
+(**`openai/gpt-oss-120b` on Groq**, not a Claude model; [full write-up](docs/eval/reconstruction.md)):
+
+| Fixture | Function recall | Behavioral probes passed | Cost per run |
+|---|---:|---:|---:|
+| `ms` (bundled) | 4/4 · 4/4 | **3/3 · 3/3** | ≈ $0.005 |
+| `escape-html` + `dlv` (minified) | 2/2 · 2/2 | **2/2 · 2/2** | ≈ $0.003 |
+| `kleur` (in an `.asar`) | 3/3 · 3/3 | not probed | ≈ $0.004 |
+| `colorsys` (`.pyc`) | 7/7 · 7/7 ¹ | not probed | ≈ $0.018 |
+
+Two complete runs each. **Honest caveats:** results vary between runs (an earlier run returned a broken
+`escapeHtml`); the verifier agent accepted everything, including broken code, so only the behavioral
+probes count; fixtures are small; runs with REE's latest slice-packing fix are still pending.
+<sub>¹ The `.pyc` summary already contains every name, so this measures nothing about the model.</sub>
+
+### Against real anti-AI hardening
+
+Measured on output of the real published [`bla-agents`](https://github.com/qybaihe/bla) at its strongest
+setting (`npm run bench:real`):
+
+| Target | Tokens an AI would read | After REE | Reduction | Decoy units removed | Planted instructions reaching the model |
 |---|---:|---:|:---:|---:|:---:|
-| **Electron app** (`.asar`) | 301,053 | 60,000² | **80.1%** | 4,560 | **0** ✅ |
-| **Webpack bundle** | 35,521 | 19,919 | **43.9%** | 94 | **0** ✅ |
-| **Node CLI** (JS) | 37,442 | 21,835 | **41.7%** | 94 | **0** ✅ |
-| **WASM module** | 38¹ | 38 | — | — | **0** ✅ |
+| Electron app (`.asar`) | 301,053 | 60,000² | **80.1%** | 4,560 | **0** |
+| Webpack bundle | 35,521 | 19,919 | **43.9%** | 94 | **0** |
+| Node CLI (JS) | 37,442 | 21,835 | **41.7%** | 94 | **0** |
 
-**Zero injection markers reach a context slice in any format** — no `<system-reminder>`, ChatML frame, fake `Human:`/`Assistant:` turn, or alignment canary. `bench:real` fails the build if a single one leaks.
+<sub>² Capped by the default 60k-token context budget; every unit with the app's real logic is inside it.
+Earlier versions of this table showed higher reductions (90% / 91.8% / 65.8%) that came from REE discarding
+real code or silently ignoring code outside a webpack registry; [the audit](docs/audit/phase-1-audit.md) and
+[protection report](docs/eval/protections.md) explain the fixes. A smaller honest number beats a larger one
+that throws code away.</sub>
 
-<sub>¹ REE's WASM parser discards the inflated custom sections at parse time, so the 6.8 MB hardened module is already down to its real code before the engine runs.<br>
-² Hits the default 60k-token context budget; every unit containing the app's real Electron logic is inside it.<br>
-**Why these are lower than earlier versions of this table (90% / 65.8% / 91.8%):** earlier REE versions quarantined whole top-level units that mixed BLA's generated statements with the app's real wiring, so real code (e.g. the CLI's `process.argv` entry, Electron's `BrowserWindow` setup) was discarded and counted as "reduction". REE now splits those units at statement level and keeps the real code. The webpack figure was also inflated: REE silently ignored everything outside the module registry — 93% of the hardened bundle — instead of cleaning it; that code is now modeled and judged like the rest. A smaller honest number beats a larger one that throws code away.</sub>
+### Against standard protections
 
-<details>
-<summary><b>Synthetic regression fixtures</b> (REE's own BLA simulator — fast, but not the number that matters)</summary>
+`npm run bench:obfuscation` ([report](docs/eval/protections.md)):
 
-<br />
-
-Reproducible with `npm run bench`. These fixtures are generated by REE's simulator of BLA's documented techniques, so they are useful as unit-level regression tests and **not** a substitute for the real-adversary table above. [`docs/audit/phase-1-audit.md`](docs/audit/phase-1-audit.md) records how these numbers overstated REE before it was tested against the real thing.
-
-| fixture | naive tokens | REE tokens | reduction | real code kept | decoys removed | leaks |
-|---|---:|---:|---:|---:|---:|---:|
-| inventory CLI (JS) | 12,648 | 730 | 94.2% | 9/9 | 12/12 | 0 |
-| webpack bundle | 994 | 416 | 58.1% | 4/4 | 6/6 | 0 |
-| Electron app (.asar) | 561 | 414 | 26.2% | 6/6 | 3/3 | 0 |
-| WASM module | 1,394 | 38 | 97.3% | 3/3 | 3/3 | 0 |
-
-On clean inputs REE removes nothing.
-
-</details>
-
-## 🚀 Quick start
-
-```bash
-git clone https://github.com/AnvitDevadiga/ree.git
-cd ree
-npm install && npm run build
-npm link                       # optional: puts `ree` on your PATH
-```
-
-```bash
-ree analyze path/to/app.asar                    # structural report + findings (no LLM)
-ree app     path/to/MyApp.dmg                   # whole app: asar + Mach-O + dylibs
-ree sanitize path/to/bundle.js -o clean.json    # LLM-safe context slices as JSON
-ree trace   path/to/module.wasm --depth 3       # call tree from the real entry point
-```
-
-Reconstruction is opt-in, and is the only feature that calls a model:
-
-```bash
-export ANTHROPIC_API_KEY=...
-ree analyze app.js --reconstruct --dry-run            # see exactly what would be sent, at zero cost
-ree analyze app.js --reconstruct --max-units 5 -o reconstruction.json
-```
+| Protection | Parses to functions | Real strings visible | Planted instructions reaching the model |
+|---|:-:|:-:|:-:|
+| Terser (minification) | ✅ | 100% | 0 |
+| javascript-obfuscator — low / medium | ✅ | 100% | 0 |
+| javascript-obfuscator — high (rc4 string array) | ✅ | 22% / 85% — flagged | 0 |
+| R8 (Android) → Vineflower / jadx | ✅ | 100% · 2/5 method names | 0 |
 
 ## 🏗 How it works
 
 ```mermaid
 flowchart TB
-    A(["📦 Artifact<br/>.asar · JS · .wasm · .pyc · ELF / Mach-O / PE · .dmg"]):::input
+    A(["📦 Any artifact<br/>.asar · JS · .wasm · APK · JAR · .NET · ELF/Mach-O/PE · .pyc · .ipa · .dmg"]):::input
 
-    subgraph CORE["🛡️  Deterministic core — no LLM, no execution"]
+    subgraph CORE["🛡️  Deterministic core — no AI, never executes the target"]
         direction TB
-        P["🔍 Bounded parsers<br/>header · depth · entry caps"]:::parse
-        M[("🧩 ArtifactModel<br/>units · references · entry points · strings")]:::model
+        D["🔎 Detect format from content"]:::parse
+        P["🔍 Bounded parsers + optional decompilers<br/>size · depth · entry · time limits"]:::parse
+        M[("🧩 Model<br/>units · references · entry points · strings")]:::model
 
-        subgraph ENGINE["Anti-BLA engine"]
+        subgraph ENGINE["Cleaning engine"]
             direction LR
-            S1["① Fold<br/>opaque predicates"]:::pass
+            S1["① Fold<br/>always-true/false conditions"]:::pass
             S2["② Prune<br/>unreachable code"]:::pass
-            S3["③ Cluster<br/>decoy families"]:::pass
-            S4["④ Quarantine<br/>context bombs"]:::pass
+            S3["③ Quarantine<br/>decoy families"]:::pass
+            S4["④ Quarantine<br/>filler & packed blobs"]:::pass
             S5["⑤ Redact<br/>planted instructions"]:::pass
             S1 --> S2 --> S3 --> S4 --> S5
         end
 
-        P --> M --> ENGINE
-        SL["✂️ Budgeted context slices<br/>entry points first · limitations attached"]:::slice
+        D --> P --> M --> ENGINE
+        SL["✂️ Small, honest slices<br/>entry points first · limitations attached"]:::slice
         ENGINE --> SL
     end
 
-    A --> P
+    A --> D
 
-    SL --> CLI["⌨️ CLI<br/>analyze · app · sanitize · trace"]:::out
-    SL --> MCP["🔌 MCP server<br/>4 tools, bounded results"]:::out
-    SL --> AG["🤖 Reconstruction agents<br/>opt-in · the only LLM calls"]:::llm
+    SL --> CLI["⌨️ CLI<br/>analyze · demo · doctor · app · trace"]:::out
+    SL --> MCP["🔌 MCP server<br/>4 tools for AI agents"]:::out
+    SL --> AG["🤖 Reconstruction<br/>opt-in · the only model calls"]:::llm
 
     classDef input fill:#f43f5e,stroke:#be123c,color:#ffffff,stroke-width:2px
     classDef parse fill:#6366f1,stroke:#4338ca,color:#ffffff
@@ -166,250 +247,139 @@ flowchart TB
     style ENGINE fill:transparent,stroke:#a78bfa,stroke-width:1px
 ```
 
-Each pass exists because the one before it can't finish the job:
-
-| # | Pass | What it removes | Why it runs here |
+| # | Pass | What it removes | Why it's safe |
 |:-:|---|---|---|
-| ① | **Fold opaque predicates** | Dead branches behind always-true/false conditions (`7x²−1 ≢ y² mod 7`, `(X\|Y) ≥ (X^Y)`) | Deletes the call sites inside dead branches, so guarded decoys *become* unreachable |
-| ② | **Prune unreachable code** | Anything no real entry point can reach | Only sound with a trusted call graph and a known entry — otherwise skipped |
-| ③ | **Cluster decoy families** | Templated tarpit functions; thousands of near-identical decoy files | Catches floods that have no honest entry graph for reachability to work from |
-| ④ | **Quarantine context bombs** | Packed blobs, filler tables, giant literals hidden inside real functions | Entropy and repetition scoring, per unit *and* per literal |
-| ⑤ | **Redact planted instructions** | AI-directed text in comments, string literals, and data | Last, so nothing upstream can reintroduce it |
+| ① | **Fold conditions** | Dead branches behind provably constant conditions (`7x²−1 ≢ y² mod 7`, `(X\|Y) ≥ (X^Y)`) | Only identities that hold for every input are folded |
+| ② | **Prune unreachable code** | Code no real entry point can reach | Only with a trusted call graph and a known entry point |
+| ③ | **Quarantine decoy families** | Large families of near-identical generated functions or files | Never an entry point, never the whole artifact |
+| ④ | **Quarantine filler** | Packed blobs and filler, judged per statement and per literal | Real statements next to a blob are kept |
+| ⑤ | **Redact planted instructions** | Text aimed at AI models in comments, strings and data — including escaped (`\x20`) and split strings | Changes only what is read, never the artifact |
 
-**Safety rule:** REE prunes only when it has a trusted call graph *and* a known entry point. An incomplete graph never deletes real code — and every analysis states its own [limitations](#-limitations-and-roadmap).
-
-## 🛡 Defense matrix
-
-| BLA technique | REE countermeasure | Status |
-|---|---|:---:|
-| Unreferenced decoy functions / modules / files | Reachability from real entry points | ✅ |
-| Opaque-predicate-guarded decoys | AST-level folding, then edge removal and pruning | ✅ |
-| **Templated tarpit-function floods** | Decoy-family clustering on a structural fingerprint | ✅ real |
-| **ASAR exhaustion floods** (thousands of decoy files) | Mass-chaff rule: tiny clones that dominate the archive | ✅ real |
-| **Instructions in string literals / data** (BLA's main vector) | Redacted in place; program structure preserved | ✅ real |
-| ChatML frames, fake turns, alignment canaries | Covered by the signature set; redacted | ✅ real |
-| **De-literalized Electron wiring** (preload / renderer / HTML) | Electron-aware entry detection | ✅ real |
-| Packed / encrypted blobs | Whole-unit quarantine + per-literal elision | ✅ |
-| Poisoned tool output reaching the agent | MCP results wrapped in an `untrustedArtifactData` envelope | ✅ |
-
-<sub>**✅ real** = verified against genuine `bla-agents` output, not only REE's simulator.</sub>
+Every analysis also reports **what REE could not establish** (missing tools, encrypted parts, incomplete
+graphs). It never presents a guess as a fact.
 
 <details>
-<summary><b>Full matrix</b> — 20 techniques, including what REE does <i>not</i> handle</summary>
+<summary><b>Anti-AI hardening techniques and how REE handles each</b></summary>
 
 <br />
 
-| BLA technique | REE countermeasure | Status |
+| Technique | REE's handling | Status |
 |---|---|---|
-| Unreferenced decoy functions / modules / files | Reachability from real entry points (`main`, exports, bootstrap `require`, `package.json` main, WASM start/exports/table targets) | ✅ JS, webpack, asar, WASM |
-| Decoy chains (decoys calling decoys) | Reachability is transitive from real roots only | ✅ |
-| Templated tarpit-function floods (dozens of `scc_*` clones) | Decoy-family clustering: structural fingerprint, quarantine large clone families | ✅ verified vs. real bla-agents |
-| ASAR exhaustion floods (thousands of decoy shard files) | Mass-chaff rule: tiny clones that dominate the archive are quarantined | ✅ verified (4,000 shards) |
-| Opaque-predicate-guarded decoys | AST-level folding of `if` / ternary / `while`, then edge removal and pruning | ✅ |
-| Honey source maps | `.map` files excluded; `sourceMappingURL` references removed | ✅ |
-| Inflated ASAR header (16 MiB trap) | Hard cap (64 MiB) plus a warning above 8 MiB; never decoded unbounded | ✅ |
-| Deep nesting traps | Depth cap on ASAR trees and marshal data | ✅ |
-| Filler / lookup-table tarpits | Repetition scoring: quarantined from LLM context | ✅ |
-| Packed / encrypted blobs | Entropy scoring: whole-unit quarantine and per-literal elision inside kept units | ✅ |
-| Electron preload / renderer / HTML wired via config | Electron-aware entry detection, so de-literalized wiring isn't pruned | ✅ verified vs. real bla-agents |
-| WASM padding functions | Exact instruction decoding plus reachability | ✅ |
-| Instructions in comments / docstrings | Removed (comments never affect behavior) | ✅ |
-| Instructions in string literals / data payloads | Redacted in place to a placeholder | ✅ verified: 42 → 0 leaks |
-| ChatML frames, fake `Human:`/`Assistant:` turns, alignment canaries | Signature set covers them; redacted from literals and data | ✅ verified vs. real bla-agents |
-| Instructions in the string table | Dropped | ✅ |
-| Poisoned tool output reaching the agent | `untrustedArtifactData` envelope on MCP results | ✅ |
-| AST-span XOR string encryption | Decoders detected and flagged | ⚠️ detection only |
-| Runtime "Truman Show" (anti-debug, fuse flips) | Never triggers — REE doesn't execute the target | ➖ out of scope |
-| Entangle (runtime SHA-256 binding across sidecars) | Needs dynamic analysis | ❌ roadmap |
+| Unreferenced decoy functions / modules / files | Reachability from real entry points | ✅ |
+| Opaque-predicate-guarded decoys | AST-level folding, then pruning | ✅ |
+| Templated decoy-function floods | Near-duplicate family detection on a structural fingerprint | ✅ verified on real bla-agents |
+| Archive floods (thousands of decoy files) | Mass-duplicate rule | ✅ verified (4,000 files) |
+| Instructions in comments, strings and data | Redacted in place; structure preserved | ✅ verified: 42 → 0 |
+| Escaped / split instruction strings | Escapes decoded and fragments joined before matching | ✅ |
+| ChatML frames, fake `Human:`/`Assistant:` turns, canaries | Redacted | ✅ |
+| Obfuscated Electron wiring | Electron-aware entry detection | ✅ verified |
+| Packed / encrypted blobs | Quarantine + per-literal elision | ✅ |
+| Honey source maps | Excluded; references removed | ✅ |
+| Inflated headers, deep nesting | Hard caps everywhere | ✅ |
+| Hostile names in metadata / tool output | Redacted before any model or MCP client sees them | ✅ |
+| Obfuscator string arrays (rc4/base64) | Detected and reported; not decoded (would require running the artifact) | ⚠️ |
+| XOR string encryption | Decoders flagged, not executed | ⚠️ |
+| Runtime anti-debugging | Never triggers — REE doesn't execute anything | ➖ |
 
 </details>
-
-## 📦 Format coverage
-
-| Format | Parsing | Call graph | Pruning | What agents receive |
-|---|---|:---:|:---:|---|
-| **JS / ESM / CJS bundle** | acorn AST: declarations, top-level code, JSDoc | ✅ | ✅ | source |
-| **Webpack-style bundle** | Module registry plus bootstrap entry | ✅ | ✅ | module source |
-| **Electron `.asar`** | Pickle header and file tree; Electron entry detection | ✅ | ✅ | file source |
-| **WebAssembly** | All sections, `name` section, element segments | ✅ | ✅ | WAT-style listing |
-| **Python `.pyc`** (3.7 – 3.14) | Full marshal decoder, per-version code-object layouts. Source with the optional **pycdc** (any version) or **uncompyle6** (≤ 3.8); [evaluation](docs/eval/pyc-decompilers.md) shows no evaluated tool works on 3.9+ yet | — | safe default | decompiled source (≤ 3.8) or params, names, consts |
-| **ELF / Mach-O / PE** | Headers, sections, symbols, imports, exports, strings. With the optional **Ghidra** (headless): every function decompiled to C pseudocode, merged with the symbol table, plus a call graph | with Ghidra | safe default | C pseudocode per function, or a symbol and import summary |
-| **Android APK / AAB** | Bounded ZIP + binary-manifest reader: package, components, permissions, DEX class counts, native libs; bundled React Native / Cordova JS fully analyzed. App classes decompiled to Java with the optional **jadx** | — | safe default | app classes (Java), bundled JS; libraries summarized |
-| **Java JAR / `.class`** | Bounded class-file reader: every class's superclass, interfaces, fields and method signatures, a constant-pool reference graph, `Main-Class` / `main()` entry points, fat-JAR libs counted. Source decompiled with the optional **Vineflower** | constant pool | safe default | Java source, or a structural summary per class |
-| **.NET assemblies** (`.dll`/`.exe`) | Bounded ECMA-335 metadata reader: assembly identity, dependencies, every type with base type, fields, methods with parameter names, P/Invoke imports, entry point, string literals. C# decompiled with the optional **ilspycmd** | inheritance only | safe default | C# source, or a metadata summary per type |
-| **iOS `.ipa`** | Structure only: Info.plist (binary or XML) identity, minimum iOS, privacy usage strings, URL schemes, transport-security exceptions; frameworks and extensions; unencrypted executable's Mach-O structure; bundled React Native / Cordova JS. **Encrypted App Store binaries are detected and reported, never decrypted** | — | safe default | metadata, symbols, bundled JS |
-| **`.dmg` / `.app`** | Read-only mount, bundle walk, routes inner artifacts | per artifact | per artifact | one report per artifact |
 
 ## ⌨️ CLI
 
 | Command | What it does |
 |---|---|
-| `ree analyze <target>` | **One command for any file.** Detects the format from content (not the extension) and routes it — including `.dmg`, `.app` and directories. Prints stats, entry points, findings and limitations; unsupported inputs get a clear message listing what works. Flags: `--json`, `--findings <n>`, `--no-prune`, `--budget <tokens>` |
-| `ree analyze <target> --reconstruct` | Run triage → synthesis → verification. Flags: `--dry-run`, `--max-units <n>`, `--no-verify`, `-o <file>` |
-| `ree app <target>` | Alias for whole-app analysis of a macOS `.dmg`, a `.app` bundle, or an extracted directory (`ree analyze` routes these automatically). Flags: `--json`, `--max-artifacts <n>` |
-| `ree sanitize <target>` | Write the cleaned model's context slices and findings to JSON (`-o`, `--budget`) |
-| `ree trace <target>` | Print the reference tree from an entry point (`-e <unit>`, `-d <depth>`) |
-| `ree doctor` | Shows your Node version, which optional external tools are installed, what each missing tool would unlock (with the install command), and whether a model provider is configured — never printing a key. `--json` for scripts |
+| `ree demo` | Analyze the bundled samples — a result in seconds |
+| `ree analyze <file>` | Any supported format or app bundle, detected from content. Stats, entry points, findings, limitations. `--json` for scripts |
+| `ree analyze <file> --reconstruct` | Rebuild readable source with a model (`--dry-run` shows exactly what would be sent, free) |
+| `ree doctor` | Node version, installed optional tools and what each missing one unlocks, model-provider status |
+| `ree app <path>` | Alias for `.dmg` / `.app` / directory analysis |
+| `ree sanitize <file>` | Write the cleaned slices and findings to JSON |
+| `ree trace <file>` | Reference tree from an entry point |
 | `ree mcp` | Start the MCP server on stdio |
 
-### Whole-app analysis
+### Using a model (optional)
 
-A shipped desktop app is a container — a disk image wrapping a bundle wrapping many artifacts. `ree app` walks it and routes each analyzable piece (the Electron `app.asar`, the main executable, bundled libraries) through the same pipeline:
+Reconstruction is the only feature that calls a model. With nothing configured, REE runs fully
+deterministic and says so.
 
-```bash
-ree app ./MyApp.dmg            # macOS: mounts read-only, analyzes, always detaches
-ree app ./MyApp.app            # an extracted bundle — any platform
-ree app ./extracted-dir --json
-```
+| Provider | Environment |
+|---|---|
+| Anthropic | `ANTHROPIC_API_KEY`, plus a required spending cap: `REE_MAX_SPEND_USD`, `REE_PRICE_INPUT_PER_MTOK`, `REE_PRICE_OUTPUT_PER_MTOK` |
+| Local (Ollama, LM Studio, vLLM) | `REE_OPENAI_BASE_URL=http://localhost:11434/v1`, `REE_MODEL_WORKHORSE=<model>` |
+| Any OpenAI-compatible API (e.g. Groq) | `REE_OPENAI_BASE_URL`, `REE_OPENAI_API_KEY`, `REE_MODEL_WORKHORSE`, plus the spending cap above |
 
-The image is mounted **read-only** and nothing inside it is ever executed. Electron apps give the richest recovery (the asar is packed JavaScript); native apps yield symbols, imports, and structure — pair them with Ghidra, Hopper, or IDA for instruction-level work.
+Paid calls are priced at their worst case **before** they are sent and refused if they could cross the
+cap. Rate limits are paced from the provider's headers.
 
 ## 🔌 MCP server
 
-REE ships a native MCP tool catalog, so an interactive agent can work on hardened targets without pulling raw artifacts into its context. Results are bounded, and artifact-derived text is wrapped in an `untrustedArtifactData` envelope.
+REE gives AI agents (Claude Desktop, Cursor, VS Code and others) four tools to work on an artifact without
+pulling raw, hostile bytes into their context. All artifact-derived text is wrapped as untrusted data.
 
-| Tool | LLM? | Purpose |
+| Tool | Calls a model? | Purpose |
 |---|:---:|---|
 | `ree_inspect` | no | Format, units, entry points, warnings, sample strings |
-| `ree_strip_decoys` | no | Run the engine; per-pass findings, token reduction, limitations |
-| `ree_trace_entrypoint` | no | Bounded call graph from a real entry point or a named unit |
-| `ree_reconstruct_module` | yes | Reconstruct one cleaned unit, with optional verification (`dryRun` supported) |
-
-Register it with any MCP-compatible client as a stdio server:
+| `ree_strip_decoys` | no | Run the cleaning engine; findings, token reduction, limitations |
+| `ree_trace_entrypoint` | no | Bounded call graph from an entry point |
+| `ree_reconstruct_module` | yes | Reconstruct one cleaned unit (`dryRun` supported) |
 
 ```json
-{
-  "mcpServers": {
-    "ree": {
-      "command": "node",
-      "args": ["/absolute/path/to/ree/dist/cli/index.js", "mcp"],
-      "env": { "ANTHROPIC_API_KEY": "..." }
-    }
-  }
-}
+{ "mcpServers": { "ree": { "command": "npx", "args": ["-y", "ree-reverse-engineer-everything", "mcp"] } } }
 ```
 
-Analysis results are cached per file (path, size, mtime), so chained tool calls on one artifact don't re-parse it.
-
-## 🤖 Reconstruction agents
-
-The agents only ever see cleaned slices. Escalation to the stronger tier needs a concrete reason — a missing verdict counts as *unverified*, never as a rejection.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant E as 🛡️ Engine
-    participant T as 🗺️ Triage
-    participant S as ✍️ Synthesis
-    participant V as 🔬 Verification
-
-    E->>T: cleaned model summary
-    T-->>E: boundaries + reconstruction order
-    loop one unit per call
-        E->>S: budgeted slice + neighbor names
-        S-->>V: reconstructed source
-        V-->>S: differential harness + verdict
-        alt explicit reject
-            S->>S: retry on deep tier with feedback
-        end
-    end
-```
-
-| Agent | Input | Output |
-|---|---|---|
-| **Triage & Boundary Mapper** | Cleaned model summary | Entry points, IPC / network / fs boundaries, reconstruction order |
-| **Decompilation & Logic Synthesis** | One budgeted slice plus neighbor names | Idiomatic source with explicit TODOs for unknowns |
-| **Behavioral Verification** | Reconstruction plus behavioral anchors | Differential test harness and `VERDICT: accept / reject` |
-
-Two model tiers — a **workhorse** for triage, synthesis, and verification, and a **deep** tier for native/WASM slices, obfuscation markers, and rejected retries — set in `src/agents/llm.ts` and overridable with `REE_MODEL_WORKHORSE` / `REE_MODEL_DEEP`. The default backend is the Anthropic API through its official SDK; swap in any other by implementing the `LlmClient` interface.
-
-## 📚 Library usage
+## 📚 Library
 
 ```ts
-import { analyze, analyzeApp, ReconstructionPipeline, AnthropicClient } from "ree-reverse-engineer-everything";
+import { analyze, analyzeApp } from "ree-reverse-engineer-everything";
 
 const { report, slices, limitations } = await analyze("dist/app.asar");
-console.log(report.stats);     // units in/out, pruned, quarantined, token estimates
-console.log(report.findings);  // every decision, auditable
-console.log(limitations);      // what REE could not establish
-
-const app = await analyzeApp("MyApp.dmg");   // one result per inner artifact
-
-const result = await new ReconstructionPipeline(new AnthropicClient()).run(report, { maxUnits: 5 });
+console.log(report.stats, report.findings, limitations);
+const app = await analyzeApp("MyApp.dmg"); // one result per inner artifact
 ```
 
 ## 🧪 Benchmarks
 
-```bash
-npm run bench:real      # vs. REAL bla-agents — installs it, hardens fixtures, gates on 0 leaks
-npm run bench           # synthetic clean vs hardened fixtures (fast, offline)
-npm run bench -- --target ./app.asar --labels ./app.labels.json   # your own artifact
-```
+| Command | Measures |
+|---|---|
+| `npm run bench:real` | Against real `bla-agents` output; fails on any leaked instruction |
+| `npm run bench:obfuscation` | Terser, javascript-obfuscator (3 levels), R8; regression gates |
+| `npm run bench:reconstruct` | Reconstruction vs. real source (needs a model and a spending cap) |
+| `npm run bench:pyc` | Python decompilers across Python 3.8–3.14 ([results](docs/eval/pyc-decompilers.md)) |
+| `npm run bench` | Fast synthetic regression fixtures |
+| `npm run smoke:pack` | The published package, installed into an empty directory |
 
-`bench:real` installs the published `bla-agents`, hardens REE's clean fixtures, scores REE's pre-pass over that genuine output, and **exits non-zero if any injection marker leaks**. Offline, it skips and exits 0; set `REE_BLA_BIN` to a local `bla` CLI to skip installation. Results land in [`benchmarks/real/RESULTS.md`](benchmarks/real/RESULTS.md).
+## 🚧 Limitations
 
-<details>
-<summary><b>Labels file format</b> for benchmarking your own artifact</summary>
+REE prints the relevant caveats with every analysis. The main ones:
 
-<br />
-
-```json
-{ "fixture": "my-app", "variant": "hardened", "format": "asar",
-  "real": ["main.js", "preload.js"], "decoys": ["lib/telemetry-v2.js"], "exhaust": [],
-  "injectedComments": 0, "injectedLiterals": 0 }
-```
-
-</details>
-
-## 🗂 Project layout
-
-<details>
-<summary>Expand</summary>
-
-```
-ree/
-├── src/
-│   ├── core/          types · token estimator · entropy · analyze() façade · limitations
-│   ├── parsers/       asar · js-bundle · wasm · pyc · native (ELF / Mach-O / PE) · registry
-│   ├── anti-bla/      opaque-predicates · reachability · decoy-family · context-bomb · sanitizer · engine
-│   ├── apps/          .dmg / .app bundle walker and read-only mount front-end
-│   ├── agents/        llm client · triage · synthesis · verification · pipeline
-│   ├── mcp/           tool implementations · cached sessions · stdio server
-│   └── cli/           commander CLI · terminal formatting
-├── benchmarks/
-│   ├── fixtures/      deterministic clean / hardened fixture generator
-│   ├── harness/       synthetic scoring + RESULTS.md writer
-│   └── real/          real bla-agents harness + RESULTS.md
-├── docs/audit/        Phase 1 audit: REE vs. real bla-agents
-└── test/              48 tests: parsers · anti-BLA passes · apps · agents · MCP protocol
-```
-
-</details>
-
-## 🚧 Limitations and roadmap
-
-REE is honest about where its guarantees stop — and prints these caveats with every analysis.
-
-- **Native and `.pyc` are structure-only.** Symbols, imports, and code objects, not decompilation, and no call graph, so nothing is pruned. Roadmap: bytecode opcode analysis per CPython version, and a pluggable disassembler provider (objdump / radare2 / Ghidra headless).
-- **Opaque-predicate folding covers known identities**, not arbitrary ones. It isn't an SMT-backed simplifier; the parameterized affine-MBA form is handled by quarantining the clones that use it rather than by folding it.
-- **Decoy-family clustering is conservative.** It quarantines only large structural-clone families, never an entry point, never the whole artifact. Webpack bundles whose decoys live *inside* module closures aren't yet split to sub-function granularity.
-- **Identifier-based JS references over-approximate**, which errs toward keeping code.
-- **String decryption:** XOR/keystream decoders are flagged, not executed.
-- **Dynamic defenses** (runtime entanglement, environment checks) are out of scope for a static analyzer.
+- **Decompiled code is an approximation.** Ghidra's C, jadx/Vineflower Java and ilspycmd C# reconstruct
+  logic, not original source. Python decompilers are often subtly wrong: pycdc truncates float constants,
+  and no evaluated tool decompiles Python 3.13+ ([evaluation](docs/eval/pyc-decompilers.md)).
+- **Without the optional tools**, APK, JAR, .NET, native and `.pyc` analysis is structural: names,
+  signatures, references — not method bodies.
+- **Some protections are reported, not undone:** encoded obfuscator string arrays (decoding would mean
+  running the artifact), control-flow flattening and injected dead code. Identifiers removed by minifiers
+  or R8 cannot be recovered by any static tool.
+- **Encrypted iOS App Store binaries cannot be analyzed** — by design, REE does not decrypt them.
+- **Reconstruction quality is measured on small fixtures and one model** so far; treat model output as a
+  draft to verify.
+- **Static only:** behavior that only appears at runtime is not observed. `.dmg` mounting needs macOS.
 
 ## 🤝 Contributing
 
-Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Found a BLA technique REE misses? That's the most useful report there is: open an issue with a minimal hardened sample you own. For security issues in REE itself, see [SECURITY.md](SECURITY.md).
+Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The most useful report is
+a technique REE misses, with a minimal sample you own or that is open source. Security issues:
+[SECURITY.md](SECURITY.md).
 
 ```bash
-npm run typecheck && npm test && npm run bench:real
+npm ci && npm run typecheck && npm test && npm run bench:real && npm run smoke:pack
 ```
 
 ## 📄 License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Optional tools and test fixtures keep their own licenses — see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 <div align="center">
 <br />
-<sub>If REE saved your agent a few hundred thousand tokens, a ⭐ helps others find it.</sub>
+<sub>If REE helped you understand something, a ⭐ helps others find it.</sub>
 </div>

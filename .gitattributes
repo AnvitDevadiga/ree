@@ -1,0 +1,5 @@
+# Keep bundled sample artifacts byte-exact on every OS.
+samples/** -text
+*.asar binary
+*.wasm binary
+*.pyc binary
