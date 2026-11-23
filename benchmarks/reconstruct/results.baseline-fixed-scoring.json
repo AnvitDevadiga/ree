@@ -1,0 +1,247 @@
+{
+  "generated": "2026-11-22T07:55:36.293Z",
+  "provider": "openai-compatible endpoint https://api.groq.com/openai/v1 (cap $2)",
+  "dryRun": false,
+  "verify": true,
+  "maxUnits": 12,
+  "totalUsd": 0.0322,
+  "totalRateLimitHits": 30,
+  "label": "baseline-fixed-scoring",
+  "rows": [
+    {
+      "fixture": "ms",
+      "source": "ms@2.1.3 (vercel/ms)",
+      "license": "MIT",
+      "format": "js-bundle",
+      "build": "esbuild bundle, iife, not minified",
+      "slices": 1,
+      "reconstructed": 1,
+      "verifierAccepted": 1,
+      "nameRecall": "4/4",
+      "namesFound": [
+        "parse",
+        "fmtShort",
+        "fmtLong",
+        "plural"
+      ],
+      "behavior": "3/3",
+      "behaviorDetail": {
+        "parse": "pass",
+        "fmtShort": "pass",
+        "ms(n, {long:true})": "pass"
+      },
+      "calls": 3,
+      "inputTokens": 3128,
+      "outputTokens": 5325,
+      "usd": 0.0037,
+      "seconds": 12.6,
+      "rateLimitHits": 0,
+      "units": [
+        {
+          "name": "bundle",
+          "tier": "workhorse",
+          "source": "\"use strict\";\n\n/**\n * Minimal CommonJS wrapper used by the original bundle.\n * It executes the module factory only once and caches the result.\n */\nfunction __commonJS(factory, cached) {\n  return function __require() {\n    try {\n      // If the module has already been executed, return the cached exports.\n      // Otherwise, call the factory with a fresh `module` object.\n      return (\n        cached ||\n        (0, factory[Object.getOwnPropertyNames(factory)[0]])(\n          (cached = { exports: {} }).exports,\n          cached\n        ),\n        cached.exports\n      );\n    } catch (e) {\n      // On error clear the cache so a subsequent require will retry.\n      cached = 0;\n      throw e;\n    }\n  };\n}\n\n/**\n * The original `ms` library (https://github.com/zeit/ms) – a tiny utility\n * for converting time values to milliseconds and back.\n *\n * The implementation below is a clean, idiomatic rewrite that preserves\n * the exact behaviour of the sliced code.\n */\nconst requireMs = __commonJS({\n  \"benchmarks/reconstruct/.cache/ms/index.js\"(exports, module) {\n    // -----------------------------------------------------------------\n    // Constants for the various time units (all expressed in milliseconds)\n    // -----------------------------------------------------------------\n    const SECOND = 1e3;\n    const MINUTE = SECOND * 60;\n    const HOUR = MINUTE * 60;\n    const DAY = HOUR * 24;\n    const WEEK = DAY * 7;\n    const YEAR = DAY * 365.25;\n\n    /**\n     * Main exported function.\n     *\n     * @param {string|number} val      The value to parse or format.\n     * @param {Object} [options]       Optional options object.\n     * @param {boolean} [options.long] If true, produce a long format string.\n     * @returns {number|string}        Milliseconds (when parsing) or a formatted string.\n     * @throws {Error}                If `val` is neither a non‑empty string nor a finite number.\n     */\n    module.exports = function (val, options) {\n      options = options || {};\n      const type = typeof val;\n\n      // Parse a string like \"2h\", \"1.5 days\", etc.\n      if (type === \"string\" && val.length > 0) {\n        return parse(val);\n      }\n\n      // Format a number of milliseconds.\n      if (type === \"number\" && isFinite(val)) {\n        return options.long ? fmtLong(val) : fmtShort(val);\n      }\n\n      // Anything else is an error.\n      throw new Error(\n        \"val is not a non-empty string or a valid number. val=\" +\n          JSON.stringify(val)\n      );\n    };\n\n    // -----------------------------------------------------------------\n    // Helper: parse a human‑readable time string into milliseconds.\n    // -----------------------------------------------------------------\n    function parse(str) {\n      str = String(str);\n      // Guard against absurdly long inputs (the original library does this).\n      if (str.length > 100) return;\n\n      const match = /^(-?(?:\\d+)?\\.?\\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(\n        str\n      );\n      if (!match) return;\n\n      const n = parseFloat(match[1]);\n      const unit = (match[2] || \"ms\").toLowerCase();\n\n      switch (unit) {\n        case \"years\":\n        case \"year\":\n        case \"yrs\":\n        case \"yr\":\n        case \"y\":\n          return n * YEAR;\n        case \"weeks\":\n        case \"week\":\n        case \"w\":\n          return n * WEEK;\n        case \"days\":\n        case \"day\":\n        case \"d\":\n          return n * DAY;\n        case \"hours\":\n        case \"hour\":\n        case \"hrs\":\n        case \"hr\":\n        case \"h\":\n          return n * HOUR;\n        case \"minutes\":\n        case \"minute\":\n        case \"mins\":\n        case \"min\":\n        case \"m\":\n          return n * MINUTE;\n        case \"seconds\":\n        case \"second\":\n        case \"secs\":\n        case \"sec\":\n        case \"s\":\n          return n * SECOND;\n        case \"milliseconds\":\n        case \"millisecond\":\n        case \"msecs\":\n        case \"msec\":\n        case \"ms\":\n          return n;\n        default:\n          return undefined;\n      }\n    }\n\n    // -----------------------------------------------------------------\n    // Helper: short format (e.g. \"2h\", \"5d\")\n    // -----------------------------------------------------------------\n    function fmtShort(ms) {\n      const abs = Math.abs(ms);\n      if (abs >= DAY) return Math.round(ms / DAY) + \"d\";\n      if (abs >= HOUR) return Math.round(ms / HOUR) + \"h\";\n      if (abs >= MINUTE) return Math.round(ms / MINUTE) + \"m\";\n      if (abs >= SECOND) return Math.round(ms / SECOND) + \"s\";\n      return ms + \"ms\";\n    }\n\n    // -----------------------------------------------------------------\n    // Helper: long format (e.g. \"2 hours\", \"5 days\")\n    // -----------------------------------------------------------------\n    function fmtLong(ms) {\n      const abs = Math.abs(ms);\n      if (abs >= DAY) return plural(ms, abs, DAY, \"day\");\n      if (abs >= HOUR) return plural(ms, abs, HOUR, \"hour\");\n      if (abs >= MINUTE) return plural(ms, abs, MINUTE, \"minute\");\n      if (abs >= SECOND) return plural(ms, abs, SECOND, \"second\");\n      return ms + \" ms\";\n    }\n\n    // -----------------------------------------------------------------\n    // Helper: pluralise a unit name when appropriate.\n    // -----------------------------------------------------------------\n    function plural(ms, abs, unitMs, name) {\n      const isPlural = abs >= unitMs * 1.5;\n      return Math.round(ms / unitMs) + \" \" + name + (isPlural ? \"s\" : \"\");\n    }\n  },\n});\n\n/**\n * Export the `ms` function directly, mirroring the original bundle's behaviour:\n * the IIFE evaluated to the result of `requireMs()`.\n */\nmodule.exports = requireMs();",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction faithfully reproduces the original bundle’s observable behavior."
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "escape-html + dlv (minified)",
+      "source": "escape-html@1.0.3, dlv@1.1.3",
+      "license": "MIT",
+      "format": "js-bundle",
+      "build": "esbuild bundle, iife, minified (names mangled)",
+      "slices": 1,
+      "reconstructed": 1,
+      "verifierAccepted": 1,
+      "nameRecall": "2/2 (minified)",
+      "namesFound": [
+        "escapeHtml",
+        "dlv"
+      ],
+      "behavior": "0/2",
+      "behaviorDetail": {
+        "escapeHtml": "fail",
+        "dlv": "fail"
+      },
+      "calls": 3,
+      "inputTokens": 3304,
+      "outputTokens": 6832,
+      "usd": 0.0046,
+      "seconds": 59.8,
+      "rateLimitHits": 3,
+      "units": [
+        {
+          "name": "bundle",
+          "tier": "workhorse",
+          "source": "```js\n\"use strict\";\n\n/**\n * Re‑implemented bundle (chunk 0) in a clean, idiomatic style.\n * The original bundle created a tiny CommonJS‑like runtime, loaded the\n * `escape-html` package and exposed two helpers:\n *   • `escapeHtml` – HTML‑escape a string\n *   • `dlv`        – deep‑value lookup with optional fallback\n *\n * The code below preserves the observable behaviour while using\n * descriptive names and standard JavaScript constructs.\n */\nvar lib = (function () {\n  /* -------------------------------------------------------------\n   * Tiny module‑system helpers (mirrors the original minified helpers)\n   * ------------------------------------------------------------- */\n  const __create = Object.create;\n  const __defProp = Object.defineProperty;\n  const __getOwnPropDesc = Object.getOwnPropertyDescriptor;\n  const __getOwnPropNames = Object.getOwnPropertyNames;\n  const __getProtoOf = Object.getPrototypeOf;\n  const __hasOwnProp = Object.prototype.hasOwnProperty;\n\n  /** Execute a factory once and return its `exports`. */\n  const __require = (factory, cached) => () => {\n    try {\n      return cached || factory((cached = { exports: {} }).exports, cached), cached.exports;\n    } catch (e) {\n      // Reset the cache on error to avoid leaking a half‑initialised module.\n      cached = 0;\n      throw e;\n    }\n  };\n\n  /** Re‑export getters from `source` onto `target`. */\n  const __reExport = (target, source) => {\n    for (const key in source) {\n      __defProp(target, key, { get: source[key], enumerable: true });\n    }\n  };\n\n  /** Copy property descriptors, skipping `except`. */\n  const __copyProps = (to, from, except, desc) => {\n    if (from && (typeof from === \"object\" || typeof from === \"function\")) {\n      for (const key of __getOwnPropNames(from)) {\n        if (!__hasOwnProp.call(to, key) && key !== except) {\n          __defProp(to, key, {\n            get: () => from[key],\n            enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable,\n          });\n        }\n      }\n    }\n    return to;\n  };\n\n  /** Convert a CommonJS module to an ES‑module‑like namespace. */\n  const __toESM = (mod, isNodeMode, target) =>\n    (target = mod != null ? __create(__getProtoOf(mod)) : {}, \n      __copyProps(\n        isNodeMode || !mod || !mod.__esModule\n          ? __defProp(target, \"default\", { value: mod, enumerable: true })\n          : target,\n        mod\n      )\n    );\n\n  /** Convert a namespace to a CommonJS‑style export object. */\n  const __toCommonJS = (mod) => __copyProps(__defProp({}, \"__esModule\", { value: true }), mod);\n\n  /* -------------------------------------------------------------\n   * 1️⃣  `escape-html` implementation (originally from the npm package)\n   * ------------------------------------------------------------- */\n  const escapeHtmlModule = __require((module, exports) => {\n    \"use strict\";\n\n    // Characters that need escaping and their HTML entities.\n    const RE = /[\"'&<>]/;\n\n    /** Escape a string for safe insertion into HTML. */\n    function escapeHtml(input) {\n      const str = \"\" + input;               // coerce to string\n      const firstMatch = RE.exec(str);\n      if (!firstMatch) return str;          // fast path – nothing to escape\n\n      let result = \"\";\n      let last = 0;\n\n      // Start scanning from the first matched character.\n      for (let i = firstMatch.index; i < str.length; i++) {\n        let replacement;\n        switch (str.charCodeAt(i)) {\n          case 34: // \"\n            replacement = \"&quot;\";\n            break;\n          case 38: // &\n            replacement = \"&amp;\";\n            break;\n          case 39: // '\n            replacement = \"&#39;\";\n            break;\n          case 60: // <\n            replacement = \"&lt;\";\n            break;\n          case 62: // >\n            replacement = \"&gt;\";\n            break;\n          default:\n            continue; // character does not need escaping\n        }\n\n        // Append the substring that did not need escaping.\n        if (i !== last) {\n          result += str.substring(last, i);\n        }\n        last = i + 1;          // move past the escaped character\n        result += replacement; // append the entity\n      }\n\n      // Append any trailing characters after the last escaped one.\n      if (i !== last) {\n        result += str.substring(last, i);\n      }\n      return result;\n    }\n\n    module.exports = escapeHtml;\n  }, null)();\n\n  /* -------------------------------------------------------------\n   * 2️⃣  Deep‑value lookup helper (`dlv`)\n   * ------------------------------------------------------------- */\n  /**\n   * Retrieve a nested value from an object using a dot‑separated path.\n   *\n   * @param {Object} obj        The object to query.\n   * @param {string|string[]} path  Dot‑separated string or array of keys.\n   * @param {*} [fallback]      Value to return if the lookup resolves to `empty`.\n   * @param {*} [empty=undefined] Sentinel that signals “value not found”.\n   * @returns {*} The resolved value or `fallback`.\n   */\n  function dlv(obj, path, fallback, empty = undefined) {\n    const parts = typeof path === \"string\" ? path.split(\".\") : path;\n    let cur = obj;\n    for (let i = 0; i < parts.length; i++) {\n      cur = cur ? cur[parts[i]] : empty;\n    }\n    return cur === empty ? fallback : cur;\n  }\n\n  /* -------------------------------------------------------------\n   * 3️⃣  Export the public API\n   * ------------------------------------------------------------- */\n  const exports = {};\n  __reExport(exports, {\n    dlv: () => dlv,\n    escapeHtml: () => __toESM(escapeHtmlModule, 1).default,\n  });\n\n  return __toCommonJS(exports);\n})();\n\n/*!\n * escape-html\n * Copyright(c) 2012-2013 TJ Holowaychuk\n * Copyright(c) 2015 Andreas Lubbe\n * Copyright(c) 2015 Tiancheng \"Timothy\" Gu\n * MIT Licensed\n */",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstructed bundle reproduces the public API, escaping logic, deep‑lookup semantics, module‑system flags, and retains all documented string anchors."
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "kleur in an Electron-style .asar",
+      "source": "kleur@4.1.5 (lukeed/kleur)",
+      "license": "MIT",
+      "format": "asar",
+      "build": "esbuild bundle (cjs) as main.js inside an .asar with package.json",
+      "slices": 2,
+      "reconstructed": 2,
+      "verifierAccepted": 2,
+      "nameRecall": "3/3",
+      "namesFound": [
+        "run",
+        "chain",
+        "init"
+      ],
+      "behavior": "not checked",
+      "behaviorDetail": {},
+      "calls": 5,
+      "inputTokens": 3938,
+      "outputTokens": 5863,
+      "usd": 0.0041,
+      "seconds": 89.8,
+      "rateLimitHits": 7,
+      "units": [
+        {
+          "name": "main.js",
+          "tier": "workhorse",
+          "source": "\"use strict\";\n\n/**\n * Minimal implementation of the `kleur` library.\n *\n * This file is a cleaned‑up version of the original source found in\n * `benchmarks/reconstruct/.cache/kleur/index.js`.  It provides a set of\n * functions that wrap text in ANSI escape codes for colour and style\n * output in terminals.\n *\n * The implementation respects the following environment variables:\n *\n * - `FORCE_COLOR` – forces colour output when set to a non‑zero value.\n * - `NODE_DISABLE_COLORS` – disables colour output when defined.\n * - `NO_COLOR` – disables colour output when defined.\n * - `TERM` – disables colour when equal to `\"dumb\"`.\n *\n * Colour output is also disabled when the process is not attached to a TTY\n * unless `FORCE_COLOR` forces it.\n */\n\nlet FORCE_COLOR;\nlet NODE_DISABLE_COLORS;\nlet NO_COLOR;\nlet TERM;\nlet isTTY = true;\n\n// Detect environment (Node.js) and read relevant variables.\nif (typeof process !== \"undefined\") {\n  ({ FORCE_COLOR, NODE_DISABLE_COLORS, NO_COLOR, TERM } = process.env || {});\n  isTTY = !!(process.stdout && process.stdout.isTTY);\n}\n\n/**\n * Core object exposing colour/style helpers.\n *\n * The `enabled` flag determines whether ANSI codes are actually emitted.\n */\nconst $ = {\n  enabled:\n    !NODE_DISABLE_COLORS &&\n    NO_COLOR == null &&\n    TERM !== \"dumb\" &&\n    (FORCE_COLOR != null && FORCE_COLOR !== \"0\" || isTTY),\n\n  // modifiers\n  reset: init(0, 0),\n  bold: init(1, 22),\n  dim: init(2, 22),\n  italic: init(3, 23),\n  underline: init(4, 24),\n  inverse: init(7, 27),\n  hidden: init(8, 28),\n  strikethrough: init(9, 29),\n\n  // foreground colours\n  black: init(30, 39),\n  red: init(31, 39),\n  green: init(32, 39),\n  yellow: init(33, 39),\n  blue: init(34, 39),\n  magenta: init(35, 39),\n  cyan: init(36, 39),\n  white: init(37, 39),\n  gray: init(90, 39),\n  grey: init(90, 39),\n\n  // background colours\n  bgBlack: init(40, 49),\n  bgRed: init(41, 49),\n  bgGreen: init(42, 49),\n  bgYellow: init(43, 49),\n  bgBlue: init(44, 49),\n  bgMagenta: init(45, 49),\n  bgCyan: init(46, 49),\n  bgWhite: init(47, 49)\n};\n\n/**\n * Apply a list of ANSI blocks to a string, handling nested resets.\n *\n * @param {Array<{open:string,close:string,rgx:RegExp}>} arr   List of blocks.\n * @param {string} str                                         Input text.\n * @returns {string}                                           Styled text.\n */\nfunction run(arr, str) {\n  let beg = \"\";\n  let end = \"\";\n\n  for (let i = 0; i < arr.length; i++) {\n    const blk = arr[i];\n    beg += blk.open;\n    end += blk.close;\n\n    // If the closing sequence already appears inside the string we need to\n    // re‑order it so that nesting works correctly.\n    if (str.indexOf(blk.close) !== -1) {\n      str = str.replace(blk.rgx, blk.close + blk.open);\n    }\n  }\n\n  return beg + str + end;\n}\n\n/**\n * Create a chainable context that remembers which codes have already been\n * applied.  This enables calls such as `kleur.red.bold('text')`.\n *\n * @param {Array<number>} has   List of opening codes already used.\n * @param {Array<Object>} keys  Corresponding block objects.\n * @returns {Object}            Context with bound colour functions.\n */\nfunction chain(has, keys) {\n  const ctx = { has, keys };\n\n  // Bind every colour / style function to the new context.\n  ctx.reset = $.reset.bind(ctx);\n  ctx.bold = $.bold.bind(ctx);\n  ctx.dim = $.dim.bind(ctx);\n  ctx.italic = $.italic.bind(ctx);\n  ctx.underline = $.underline.bind(ctx);\n  ctx.inverse = $.inverse.bind(ctx);\n  ctx.hidden = $.hidden.bind(ctx);\n  ctx.strikethrough = $.strikethrough.bind(ctx);\n  ctx.black = $.black.bind(ctx);\n  ctx.red = $.red.bind(ctx);\n  ctx.green = $.green.bind(ctx);\n  ctx.yellow = $.yellow.bind(ctx);\n  ctx.blue = $.blue.bind(ctx);\n  ctx.magenta = $.magenta.bind(ctx);\n  ctx.cyan = $.cyan.bind(ctx);\n  ctx.white = $.white.bind(ctx);\n  ctx.gray = $.gray.bind(ctx);\n  ctx.grey = $.grey.bind(ctx);\n  ctx.bgBlack = $.bgBlack.bind(ctx);\n  ctx.bgRed = $.bgRed.bind(ctx);\n  ctx.bgGreen = $.bgGreen.bind(ctx);\n  ctx.bgYellow = $.bgYellow.bind(ctx);\n  ctx.bgBlue = $.bgBlue.bind(ctx);\n  ctx.bgMagenta = $.bgMagenta.bind(ctx);\n  ctx.bgCyan = $.bgCyan.bind(ctx);\n  ctx.bgWhite = $.bgWhite.bind(ctx);\n\n  return ctx;\n}\n\n/**\n * Factory that creates a colour/style function.\n *\n * @param {number} open   ANSI opening code.\n * @param {number} close  ANSI closing code.\n * @returns {function(string=):any}  The generated function.\n *\n * The returned function works in two modes:\n *\n * 1. **Standalone** – called directly, e.g. `red('text')`.  It returns the\n *    coloured string (or a chainable context when called without arguments).\n *\n * 2. **Chained** – when the function is invoked as a method of a context\n *    created by a previous call, it adds its code to the context and returns\n *    either the context (if no text is supplied) or the coloured string.\n */\nfunction init(open, close) {\n  const blk = {\n    open: `\\x1B[${open}m`,\n    close: `\\x1B[${close}m`,\n    rgx: new RegExp(`\\\\x1b\\\\[${close}m`, \"g\")\n  };\n\n  return function (txt) {\n    // `this` is a context object when the function is used in a chain.\n    if (this !== undefined && this.has !== undefined) {\n      // Record the code only once per chain.\n      if (!this.has.includes(open)) {\n        this.has.push(open);\n        this.keys.push(blk);\n      }\n\n      // No argument → return the context for further chaining.\n      if (txt === undefined) {\n        return this;\n      }\n\n      // With argument → apply accumulated codes.\n      return $.enabled ? run(this.keys, String(txt)) : String(txt);\n    }\n\n    // Not called as a method → behave as a top‑level helper.\n    if (txt === undefined) {\n      // Return a fresh chain containing only this code.\n      return chain([open], [blk]);\n    }\n\n    return $.enabled ? run([blk], String(txt)) : String(txt);\n  };\n}\n\n// Export the colour helper object.\nmodule.exports = $;",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches all documented anchors and faithfully reproduces the original kleur behaviour."
+          }
+        },
+        {
+          "name": "package.json",
+          "tier": "workhorse",
+          "source": "{\n  \"name\": \"kleur-app\",\n  \"main\": \"main.js\"\n}",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction contains exactly the observed keys with the exact literal values and correctly references the neighbour file main.js."
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "colorsys (.pyc)",
+      "source": "CPython stdlib colorsys.py",
+      "license": "PSF-2.0",
+      "format": "pyc",
+      "build": "python3 -m py_compile",
+      "slices": 8,
+      "reconstructed": 8,
+      "verifierAccepted": 8,
+      "nameRecall": "7/7",
+      "namesFound": [
+        "rgb_to_yiq",
+        "yiq_to_rgb",
+        "rgb_to_hls",
+        "hls_to_rgb",
+        "_v",
+        "rgb_to_hsv",
+        "hsv_to_rgb"
+      ],
+      "behavior": "not checked",
+      "behaviorDetail": {},
+      "calls": 19,
+      "inputTokens": 11503,
+      "outputTokens": 30241,
+      "usd": 0.0199,
+      "seconds": 1102.9,
+      "rateLimitHits": 20,
+      "units": [
+        {
+          "name": "<module>",
+          "tier": "workhorse",
+          "source": "\"\"\"Conversion functions between RGB and other color systems.\n\nThis module provides two functions for each color system ABC:\n\n  rgb_to_abc(r, g, b) --> a, b, c\n  abc_to_rgb(a, b, c) --> r, g, b\n\nAll inputs and outputs are triples of floats in the range [0.0...1.0]\n(with the exception of I and Q, which covers a slightly larger range).\nInputs outside the valid range may cause exceptions or invalid outputs.\n\nSupported color systems:\nRGB: Red, Green, Blue components\nYIQ: Luminance, Chrominance (used by composite video signals)\nHLS: Hue, Luminance, Saturation\nHSV: Hue, Saturation, Value\n\"\"\"\n\n__all__ = [\n    \"rgb_to_yiq\",\n    \"yiq_to_rgb\",\n    \"rgb_to_hls\",\n    \"hls_to_rgb\",\n    \"rgb_to_hsv\",\n    \"hsv_to_rgb\",\n]\n\n# constants used by the conversion formulas\nONE_THIRD = 1.0 / 3.0\nONE_SIXTH = 1.0 / 6.0\nTWO_THIRD = 2.0 / 3.0\n\n\ndef rgb_to_yiq(r: float, g: float, b: float) -> tuple[float, float, float]:\n    \"\"\"Convert red, green, blue to YIQ color space.\"\"\"\n    y = 0.299 * r + 0.587 * g + 0.114 * b\n    i = 0.596 * r - 0.274 * g - 0.322 * b\n    q = 0.211 * r - 0.523 * g + 0.312 * b\n    return y, i, q\n\n\ndef yiq_to_rgb(y: float, i: float, q: float) -> tuple[float, float, float]:\n    \"\"\"Convert YIQ to red, green, blue.\"\"\"\n    r = y + 0.956 * i + 0.621 * q\n    g = y - 0.272 * i - 0.647 * q\n    b = y - 1.106 * i + 1.703 * q\n    return r, g, b\n\n\ndef _v(m1: float, m2: float, hue: float) -> float:\n    \"\"\"Helper for HLS/HSV conversion.\n\n    The hue value is wrapped into the [0.0, 1.0) interval and then\n    interpolated between *m1* and *m2* according to its position.\n    \"\"\"\n    hue = hue % 1.0\n    if hue < ONE_SIXTH:\n        return m1 + (m2 - m1) * hue * 6.0\n    if hue < 0.5:\n        return m2\n    if hue < TWO_THIRD:\n        return m1 + (m2 - m1) * (TWO_THIRD - hue) * 6.0\n    return m1\n\n\ndef rgb_to_hls(r: float, g: float, b: float) -> tuple[float, float, float]:\n    \"\"\"Convert RGB to HLS.\"\"\"\n    maxc = max(r, g, b)\n    minc = min(r, g, b)\n    l = (maxc + minc) / 2.0\n\n    if maxc == minc:                     # achromatic\n        return 0.0, l, 0.0\n\n    if l <= 0.5:\n        s = (maxc - minc) / (maxc + minc)\n    else:\n        s = (maxc - minc) / (2.0 - maxc - minc)\n\n    rc = (maxc - r) / (maxc - minc)\n    gc = (maxc - g) / (maxc - minc)\n    bc = (maxc - b) / (maxc - minc)\n\n    if r == maxc:\n        h = bc - gc\n    elif g == maxc:\n        h = 2.0 + rc - bc\n    else:\n        h = 4.0 + gc - rc\n\n    h = (h / 6.0) % 1.0\n    return h, l, s\n\n\ndef hls_to_rgb(h: float, l: float, s: float) -> tuple[float, float, float]:\n    \"\"\"Convert HLS to RGB.\"\"\"\n    if s == 0.0:                         # achromatic\n        return l, l, l\n\n    if l <= 0.5:\n        m2 = l * (1.0 + s)\n    else:\n        m2 = l + s - l * s\n    m1 = 2.0 * l - m2\n\n    r = _v(m1, m2, h + ONE_THIRD)\n    g = _v(m1, m2, h)\n    b = _v(m1, m2, h - ONE_THIRD)\n    return r, g, b\n\n\ndef rgb_to_hsv(r: float, g: float, b: float) -> tuple[float, float, float]:\n    \"\"\"Convert RGB to HSV.\"\"\"\n    maxc = max(r, g, b)\n    minc = min(r, g, b)\n    v = maxc\n\n    if maxc == minc:                     # achromatic\n        return 0.0, 0.0, v\n\n    s = (maxc - minc) / maxc\n\n    rc = (maxc - r) / (maxc - minc)\n    gc = (maxc - g) / (maxc - minc)\n    bc = (maxc - b) / (maxc - minc)\n\n    if r == maxc:\n        h = bc - gc\n    elif g == maxc:\n        h = 2.0 + rc - bc\n    else:\n        h = 4.0 + gc - rc\n\n    h = (h / 6.0) % 1.0\n    return h, s, v\n\n\ndef hsv_to_rgb(h: float, s: float, v: float) -> tuple[float, float, float]:\n    \"\"\"Convert HSV to RGB.\"\"\"\n    if s == 0.0:                         # achromatic (grey)\n        return v, v, v\n\n    i = int(h * 6.0)                     # sector 0 to 5\n    f = (h * 6.0) - i\n    p = v * (1.0 - s)\n    q = v * (1.0 - s * f)\n    t = v * (1.0 - s * (1.0 - f))\n    i %= 6\n\n    if i == 0:\n        return v, t, p\n    if i == 1:\n        return q, v, p\n    if i == 2:\n        return p, v, t\n    if i == 3:\n        return p, q, v\n    if i == 4:\n        return t, p, v\n    # i == 5\n    return v, p, q",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the implementation matches the documented formulas and passes comprehensive round‑trip and constant checks."
+          }
+        },
+        {
+          "name": "<module>.rgb_to_yiq",
+          "tier": "workhorse",
+          "source": "def rgb_to_yiq(r, g, b):\n    \"\"\"Convert the color from RGB coordinates to YIQ coordinates.\n\n    Parameters\n    ----------\n    r, g, b : float\n        Red, green, and blue components of the color, each in the range [0.0, 1.0].\n\n    Returns\n    -------\n    tuple of float\n        (y, i, q) where:\n        * y is the luminance component,\n        * i and q are the chrominance components.\n    \"\"\"\n    y = 0.299 * r + 0.587 * g + 0.114 * b\n    i = 0.596 * r - 0.274 * g - 0.322 * b\n    q = 0.211 * r - 0.523 * g + 0.312 * b\n    return y, i, q",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the standard RGB→YIQ formula exactly."
+          }
+        },
+        {
+          "name": "<module>.yiq_to_rgb",
+          "tier": "workhorse",
+          "source": "def yiq_to_rgb(y, i, q):\n    \"\"\"Convert YIQ color space to RGB.\n\n    Parameters\n    ----------\n    y, i, q : float\n        YIQ components (typically in the range 0‑1).\n\n    Returns\n    -------\n    tuple of float\n        Corresponding (r, g, b) values.\n    \"\"\"\n    r = y + 0.956 * i + 0.621 * q\n    g = y - 0.272 * i - 0.647 * q\n    b = y - 1.106 * i + 1.703 * q\n    return r, g, b",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the canonical YIQ→RGB linear formula and exhibits the expected API and error behaviour."
+          }
+        },
+        {
+          "name": "<module>.rgb_to_hls",
+          "tier": "workhorse",
+          "source": "def rgb_to_hls(r, g, b):\n    \"\"\"\n    Convert the color from RGB coordinates to HLS coordinates.\n\n    Parameters\n    ----------\n    r, g, b : float\n        Red, green, and blue components of the color, each in the range [0.0, 1.0].\n\n    Returns\n    -------\n    h, l, s : float\n        Hue, lightness, and saturation components, each in the range [0.0, 1.0].\n    \"\"\"\n    maxc = max(r, g, b)\n    minc = min(r, g, b)\n\n    # Lightness is the average of the max and min channel values.\n    l = (maxc + minc) / 2.0\n\n    # If the color is a shade of gray (no chroma), hue and saturation are zero.\n    if maxc == minc:\n        return 0.0, l, 0.0\n\n    # Saturation depends on lightness.\n    if l <= 0.5:\n        s = (maxc - minc) / (maxc + minc)\n    else:\n        s = (maxc - minc) / (2.0 - maxc - minc)\n\n    # Compute the intermediate values for hue calculation.\n    rc = (maxc - r) / (maxc - minc)\n    gc = (maxc - g) / (maxc - minc)\n    bc = (maxc - b) / (maxc - minc)\n\n    # Determine hue based on which channel is the maximum.\n    if r == maxc:\n        h = bc - gc\n    elif g == maxc:\n        h = 2.0 + rc - bc\n    else:  # b == maxc\n        h = 4.0 + gc - rc\n\n    # Normalize hue to the range [0, 1).\n    h = (h / 6.0) % 1.0\n\n    return h, l, s",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstructed rgbtohls follows the standard algorithm (identical to colorsys.rgbtohls) and passes a comprehensive differential suite that would expose typical implementation mistakes."
+          }
+        },
+        {
+          "name": "<module>.hls_to_rgb",
+          "tier": "deep",
+          "source": "# colorsys.py – reconstructed fragment\n# -------------------------------------------------\n# Implementation of the `hls_to_rgb` conversion function\n# from the Python standard library (module `colorsys`).\n# The algorithm follows CPython 3.14 exactly.\n\nONE_THIRD = 1.0 / 3.0  # hue offset used for the RGB components\n\n\ndef hls_to_rgb(h, l, s):\n    \"\"\"\n    Convert a color from HLS (Hue, Lightness, Saturation) to\n    RGB (Red, Green, Blue).\n\n    Parameters\n    ----------\n    h : float\n        Hue component, in the range [0.0, 1.0].\n    l : float\n        Lightness component, in the range [0.0, 1.0].\n    s : float\n        Saturation component, in the range [0.0, 1.0].\n\n    Returns\n    -------\n    tuple[float, float, float]\n        (r, g, b) each in the range [0.0, 1.0].\n    \"\"\"\n    # Achromatic case – hue is irrelevant\n    if s == 0.0:\n        return l, l, l\n\n    # Compute the temporary values m1 and m2 that define the\n    # interpolation range for the RGB components.\n    if l <= 0.5:\n        m2 = l * (1.0 + s)\n    else:\n        m2 = l + s - l * s\n    m1 = 2.0 * l - m2\n\n    # Helper that converts a hue to the corresponding RGB component.\n    def _v(m1, m2, hue):\n        hue = hue % 1.0  # wrap hue into [0, 1)\n        if hue < 1.0 / 6.0:\n            # First sixth of the hue circle\n            return m1 + (m2 - m1) * hue * 6.0\n        if hue < 0.5:\n            # Middle of the hue circle\n            return m2\n        if hue < 2.0 / 3.0:\n            # Fifth sixth of the hue circle\n            return m1 + (m2 - m1) * (2.0 / 3.0 - hue) * 6.0\n        # Remaining part of the hue circle\n        return m1\n\n    # Apply the helper with the appropriate hue offsets.\n    r = _v(m1, m2, h + ONE_THIRD)\n    g = _v(m1, m2, h)\n    b = _v(m1, m2, h - ONE_THIRD)\n\n    return r, g, b",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the source mirrors CPython’s colorsys.hlstorgb algorithm exactly."
+          }
+        },
+        {
+          "name": "<module>._v",
+          "tier": "workhorse",
+          "source": "# colorsys.py – excerpt\n# Reconstructed from byte‑code slice of the internal helper _v.\n# The original module defines a few constants used by the conversion helpers.\n\nONE_SIXTH = 1.0 / 6.0\nTWO_THIRD = 2.0 / 3.0\n\n\ndef _v(m1, m2, hue):\n    \"\"\"\n    Internal helper used by the HLS ↔ RGB conversion functions.\n\n    Parameters\n    ----------\n    m1, m2 : float\n        Intermediate values computed from lightness and saturation.\n    hue : float\n        Hue component, expressed in the range [0.0, 1.0).\n\n    Returns\n    -------\n    float\n        The value of one of the RGB components.\n    \"\"\"\n    # Wrap hue into the [0, 1) interval.\n    hue = hue % 1.0\n\n    if hue < ONE_SIXTH:\n        # First sixth of the hue circle.\n        return m1 + (m2 - m1) * hue * 6.0\n    if hue < 0.5:\n        # Middle half of the hue circle.\n        return m2\n    if hue < TWO_THIRD:\n        # Between one‑half and two‑thirds of the hue circle.\n        return m1 + (m2 - m1) * (TWO_THIRD - hue) * 6.0\n    # Remaining part of the hue circle.\n    return m1",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the known CPython source for colorsys.v and the harness validates its exact arithmetic behavior."
+          }
+        },
+        {
+          "name": "<module>.rgb_to_hsv",
+          "tier": "workhorse",
+          "source": "def rgb_to_hsv(r, g, b):\n    \"\"\"\n    Convert the color from RGB coordinates to HSV coordinates.\n\n    Parameters\n    ----------\n    r, g, b : float\n        Red, green, and blue components in the range [0, 1].\n\n    Returns\n    -------\n    h, s, v : float\n        Hue, saturation, and value components in the range [0, 1].\n    \"\"\"\n    maxc = max(r, g, b)\n    minc = min(r, g, b)\n    v = maxc\n\n    # If the color is a shade of gray (no chroma), hue and saturation are zero.\n    if minc == maxc:\n        return 0.0, 0.0, v\n\n    # Saturation is the ratio of chroma to value.\n    s = (maxc - minc) / maxc\n\n    # Compute intermediate values for hue calculation.\n    rc = (maxc - r) / (maxc - minc)\n    gc = (maxc - g) / (maxc - minc)\n    bc = (maxc - b) / (maxc - minc)\n\n    # Determine hue sector.\n    if r == maxc:\n        h = bc - gc\n    elif g == maxc:\n        h = 2.0 + rc - bc\n    else:  # b == maxc\n        h = 4.0 + gc - rc\n\n    # Normalize hue to the range [0, 1].\n    h = (h / 6.0) % 1.0\n    return h, s, v",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstructed function matches the standard RGB→HSV conversion algorithm on all critical edge cases."
+          }
+        },
+        {
+          "name": "<module>.hsv_to_rgb",
+          "tier": "workhorse",
+          "source": "def hsv_to_rgb(h, s, v):\n    \"\"\"\n    Convert hue, saturation, value to red, green, blue.\n\n    Parameters\n    ----------\n    h, s, v : float\n        Hue, saturation and value components, each in the range [0.0, 1.0].\n\n    Returns\n    -------\n    r, g, b : float\n        Red, green and blue components, each in the range [0.0, 1.0].\n\n    The algorithm follows the standard HSV→RGB conversion used by the\n    Python ``colorsys`` module.\n    \"\"\"\n    # When saturation is zero the color is a shade of gray.\n    if s == 0.0:\n        return v, v, v\n\n    # Determine which sector of the color wheel the hue falls into.\n    i = int(h * 6.0)          # int() truncates toward zero\n    f = (h * 6.0) - i         # fractional part of h*6\n\n    # Compute intermediate values.\n    p = v * (1.0 - s)\n    q = v * (1.0 - s * f)\n    t = v * (1.0 - s * (1.0 - f))\n\n    # Wrap the sector index to the range [0, 5].\n    i = i % 6\n\n    # Map the sector to the appropriate RGB tuple.\n    if i == 0:\n        return v, t, p\n    if i == 1:\n        return q, v, p\n    if i == 2:\n        return p, v, t\n    if i == 3:\n        return p, q, v\n    if i == 4:\n        return t, p, v\n    # i == 5\n    return v, p, q",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the canonical HSV→RGB algorithm used by Python’s colorsys and the harness would confirm identical output on exhaustive edge‑case testing."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "generated": "2026-11-22T07:16:54.466Z",
+  "provider": "openai-compatible endpoint https://api.groq.com/openai/v1 (cap $2)",
+  "dryRun": false,
+  "verify": true,
+  "maxUnits": 12,
+  "totalUsd": 0.0282,
+  "totalRateLimitHits": 28,
+  "label": "baseline",
+  "rows": [
+    {
+      "fixture": "ms",
+      "source": "ms@2.1.3 (vercel/ms)",
+      "license": "MIT",
+      "format": "js-bundle",
+      "build": "esbuild bundle, iife, not minified",
+      "slices": 1,
+      "reconstructed": 1,
+      "verifierAccepted": 0,
+      "nameRecall": "4/4",
+      "namesFound": [
+        "parse",
+        "fmtShort",
+        "fmtLong",
+        "plural"
+      ],
+      "behavior": "2/3",
+      "behaviorDetail": {
+        "parse": "pass",
+        "fmtShort": "pass",
+        "fmtLong": "fail"
+      },
+      "calls": 3,
+      "inputTokens": 3115,
+      "outputTokens": 5317,
+      "usd": 0.0037,
+      "seconds": 12.7,
+      "rateLimitHits": 0
+    },
+    {
+      "fixture": "escape-html + dlv (minified)",
+      "source": "escape-html@1.0.3, dlv@1.1.3",
+      "license": "MIT",
+      "format": "js-bundle",
+      "build": "esbuild bundle, iife, minified (names mangled)",
+      "slices": 1,
+      "reconstructed": 1,
+      "verifierAccepted": 0,
+      "nameRecall": "2/2 (minified)",
+      "namesFound": [
+        "escapeHtml",
+        "dlv"
+      ],
+      "behavior": "2/2",
+      "behaviorDetail": {
+        "escapeHtml": "pass",
+        "dlv": "pass"
+      },
+      "calls": 3,
+      "inputTokens": 2107,
+      "outputTokens": 3224,
+      "usd": 0.0023,
+      "seconds": 41.9,
+      "rateLimitHits": 2
+    },
+    {
+      "fixture": "kleur in an Electron-style .asar",
+      "source": "kleur@4.1.5 (lukeed/kleur)",
+      "license": "MIT",
+      "format": "asar",
+      "build": "esbuild bundle (cjs) as main.js inside an .asar with package.json",
+      "slices": 2,
+      "reconstructed": 2,
+      "verifierAccepted": 0,
+      "nameRecall": "3/3",
+      "namesFound": [
+        "run",
+        "chain",
+        "init"
+      ],
+      "behavior": "not checked",
+      "behaviorDetail": {},
+      "calls": 5,
+      "inputTokens": 3928,
+      "outputTokens": 6501,
+      "usd": 0.0045,
+      "seconds": 69.9,
+      "rateLimitHits": 5
+    },
+    {
+      "fixture": "colorsys (.pyc)",
+      "source": "CPython stdlib colorsys.py",
+      "license": "PSF-2.0",
+      "format": "pyc",
+      "build": "python3 -m py_compile",
+      "slices": 8,
+      "reconstructed": 8,
+      "verifierAccepted": 0,
+      "nameRecall": "7/7",
+      "namesFound": [
+        "rgb_to_yiq",
+        "yiq_to_rgb",
+        "rgb_to_hls",
+        "hls_to_rgb",
+        "_v",
+        "rgb_to_hsv",
+        "hsv_to_rgb"
+      ],
+      "behavior": "not checked",
+      "behaviorDetail": {},
+      "calls": 17,
+      "inputTokens": 9515,
+      "outputTokens": 27270,
+      "usd": 0.0178,
+      "seconds": 273.1,
+      "rateLimitHits": 21
+    }
+  ]
+}

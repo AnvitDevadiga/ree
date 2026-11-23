@@ -1,0 +1,287 @@
+{
+  "generated": "2026-11-23T05:07:09.230Z",
+  "provider": "openai-compatible endpoint https://api.groq.com/openai/v1 (cap $2)",
+  "dryRun": false,
+  "verify": true,
+  "maxUnits": 12,
+  "totalUsd": 0.0418,
+  "totalRateLimitHits": 0,
+  "label": "after-r1",
+  "rows": [
+    {
+      "fixture": "ms",
+      "source": "ms@2.1.3 (vercel/ms)",
+      "license": "MIT",
+      "format": "js-bundle",
+      "build": "esbuild bundle, iife, not minified",
+      "slices": 8,
+      "reconstructed": 8,
+      "verifierAccepted": 8,
+      "nameRecall": "4/4",
+      "namesFound": [
+        "parse",
+        "fmtShort",
+        "fmtLong",
+        "plural"
+      ],
+      "behavior": "3/3",
+      "behaviorDetail": {
+        "parse": "pass",
+        "fmtShort": "pass",
+        "ms(n, {long:true})": "pass"
+      },
+      "calls": 17,
+      "inputTokens": 7734,
+      "outputTokens": 18980,
+      "usd": 0.0125,
+      "seconds": 309.1,
+      "rateLimitHits": 0,
+      "pacedSeconds": 262.2,
+      "units": [
+        {
+          "name": "<top-level>",
+          "tier": "workhorse",
+          "source": "\"use strict\";",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction consists solely of the \"use strict\" directive, which satisfies all literal and strict‑mode behavioral anchors."
+          }
+        },
+        {
+          "name": "<wrapper>",
+          "tier": "workhorse",
+          "source": "// <wrapper>.js\n// This module acts as the entry‑point wrapper for the bundle.\n(function () {\n  // Helper used by other parts of the bundle (e.g., for iterating over\n  // an object's own property names).  It is defined here so that the\n  // generated code can reference it without pulling in the global each time.\n  var __getOwnPropNames = Object.getOwnPropertyNames;\n\n  // The actual entry module of the bundle.  In the original source this\n  // would be imported or required from another generated file.\n  // TODO: provide the real implementation or import of `require_index`.\n  // eslint-disable-next-line no-undef\n  return require_index();\n})();",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the wrapper satisfies all observable contracts (calls requireindex once, returns its result, and keeps getOwnPropNames scoped), matching the known behavior of the original entry‑point."
+          }
+        },
+        {
+          "name": "<module ms/index.js>",
+          "tier": "workhorse",
+          "source": "// ms/index.js\n// Time‑unit constants expressed in milliseconds.\n\nconst s = 1e3;          // seconds\nconst m = s * 60;       // minutes\nconst h = m * 60;       // hours\nconst d = h * 24;       // days\nconst w = d * 7;        // weeks\nconst y = d * 365.25;   // years (average, accounting for leap years)\n\n// Export the constants for CommonJS environments.\nmodule.exports = { s, m, h, d, w, y };",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the mathematically‑derived constant values, which are the only observable behavior we can verify."
+          }
+        },
+        {
+          "name": "module.exports",
+          "tier": "workhorse",
+          "source": "/**\n * Exported utility function.\n *\n * - If `val` is a non‑empty string, it is parsed with the `parse` helper.\n * - If `val` is a finite number, it is formatted with either `fmtLong` or\n *   `fmtShort` depending on the `long` flag in `options`.\n * - For any other input an error is thrown.\n *\n * The helpers `parse`, `fmtLong` and `fmtShort` are expected to be defined\n * elsewhere in the bundle and are used as‑is.\n */\nfunction exported(val, options) {\n  // Ensure we always have an options object.\n  options = options || {};\n\n  const type = typeof val;\n\n  // Handle string input.\n  if (type === 'string' && val.length > 0) {\n    return parse(val);\n  }\n\n  // Handle numeric input.\n  if (type === 'number' && Number.isFinite(val)) {\n    return options.long ? fmtLong(val) : fmtShort(val);\n  }\n\n  // Anything else is invalid.\n  throw new Error(\n    'val is not a non-empty string or a valid number. val=' + JSON.stringify(val)\n  );\n}\n\nmodule.exports = exported;",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches all documented branches, uses the same type checks, delegates to the three external helpers, and reproduces the exact error message."
+          }
+        },
+        {
+          "name": "parse",
+          "tier": "workhorse",
+          "source": "// Time‑unit multipliers (in milliseconds)\n// TODO: verify that the intended values match the original library.\n// The common approximations are used here.\nconst MILLISECONDS_IN_SECOND = 1000;\nconst MILLISECONDS_IN_MINUTE = 60 * MILLISECONDS_IN_SECOND;\nconst MILLISECONDS_IN_HOUR   = 60 * MILLISECONDS_IN_MINUTE;\nconst MILLISECONDS_IN_DAY    = 24 * MILLISECONDS_IN_HOUR;\nconst MILLISECONDS_IN_WEEK   = 7 * MILLISECONDS_IN_DAY;\nconst MILLISECONDS_IN_YEAR   = 365 * MILLISECONDS_IN_DAY; // leap years are ignored\n\n// Short aliases used by the original switch‑statement\nconst s = MILLISECONDS_IN_SECOND;\nconst m = MILLISECONDS_IN_MINUTE;\nconst h = MILLISECONDS_IN_HOUR;\nconst d = MILLISECONDS_IN_DAY;\nconst w = MILLISECONDS_IN_WEEK;\nconst y = MILLISECONDS_IN_YEAR;\n\n/**\n * Parse a human‑readable duration string and return the length in milliseconds.\n *\n * Supported formats (case‑insensitive):\n *   \"<number> ms|msec|milliseconds\"\n *   \"<number> s|sec|secs|seconds\"\n *   \"<number> m|min|mins|minutes\"\n *   \"<number> h|hr|hrs|hours\"\n *   \"<number> d|day|days\"\n *   \"<number> w|week|weeks\"\n *   \"<number> y|yr|yrs|year|years\"\n *\n * The numeric part may be an integer or a decimal, optionally prefixed with `-`.\n * Strings longer than 100 characters are rejected (returns `undefined`).\n *\n * @param {any} str - The value to parse.\n * @returns {number|undefined} Milliseconds, or `undefined` if parsing fails.\n */\nfunction parse(str) {\n  // Coerce to string – this mirrors the original behaviour.\n  str = String(str);\n\n  // Guard against excessively long inputs (original limit).\n  if (str.length > 100) {\n    return;\n  }\n\n  // Regex captures:\n  //   1) the numeric value (with optional sign and decimal point)\n  //   2) an optional unit suffix\n  const match = /^(-?(?:\\d+)?\\.?\\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(\n    str\n  );\n\n  if (!match) {\n    return;\n  }\n\n  const n = parseFloat(match[1]);               // numeric magnitude\n  const type = (match[2] || \"ms\").toLowerCase(); // default to milliseconds\n\n  switch (type) {\n    case \"years\":\n    case \"year\":\n    case \"yrs\":\n    case \"yr\":\n    case \"y\":\n      return n * y;\n\n    case \"weeks\":\n    case \"week\":\n    case \"w\":\n      return n * w;\n\n    case \"days\":\n    case \"day\":\n    case \"d\":\n      return n * d;\n\n    case \"hours\":\n    case \"hour\":\n    case \"hrs\":\n    case \"hr\":\n    case \"h\":\n      return n * h;\n\n    case \"minutes\":\n    case \"minute\":\n    case \"mins\":\n    case \"min\":\n    case \"m\":\n      return n * m;\n\n    case \"seconds\":\n    case \"second\":\n    case \"secs\":\n    case \"sec\":\n    case \"s\":\n      return n * s;\n\n    case \"milliseconds\":\n    case \"millisecond\":\n    case \"msecs\":\n    case \"msec\":\n    case \"ms\":\n      return n;\n\n    default:\n      // Should never happen because the regex restricts the suffix,\n      // but we keep the original fallback.\n      return undefined;\n  }\n}\n\n// Export for CommonJS environments (e.g., Node.js)\n// Adjust as needed for other module systems.\nmodule.exports = parse;",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches all documented anchors, defaulting rules, length limit, and case‑insensitive parsing described in the original artifact."
+          }
+        },
+        {
+          "name": "fmtShort",
+          "tier": "workhorse",
+          "source": "// Time unit constants (milliseconds)\nconst DAY_MS   = 24 * 60 * 60 * 1000; // 86 400 000 ms\nconst HOUR_MS  = 60 * 60 * 1000;      // 3 600 000 ms\nconst MINUTE_MS = 60 * 1000;         // 60 000 ms\nconst SECOND_MS = 1000;              // 1 000 ms\n\n/**\n * Formats a duration given in milliseconds to a short human‑readable string.\n *\n * The function picks the largest time unit for which the absolute value of the\n * duration is at least one whole unit, rounds to the nearest integer, and\n * appends the appropriate suffix:\n *   - \"d\" for days\n *   - \"h\" for hours\n *   - \"m\" for minutes\n *   - \"s\" for seconds\n *   - \"ms\" for milliseconds (fallback)\n *\n * @param {number} ms – Duration in milliseconds (can be negative).\n * @returns {string} Short formatted duration.\n */\nfunction fmtShort(ms) {\n  const msAbs = Math.abs(ms);\n\n  if (msAbs >= DAY_MS) {\n    return Math.round(ms / DAY_MS) + \"d\";\n  }\n  if (msAbs >= HOUR_MS) {\n    return Math.round(ms / HOUR_MS) + \"h\";\n  }\n  if (msAbs >= MINUTE_MS) {\n    return Math.round(ms / MINUTE_MS) + \"m\";\n  }\n  if (msAbs >= SECOND_MS) {\n    return Math.round(ms / SECOND_MS) + \"s\";\n  }\n  return ms + \"ms\";\n}\n\n// Export for use in other modules (CommonJS / ES modules)\n// module.exports = fmtShort;          // Uncomment for CommonJS\n// export default fmtShort;            // Uncomment for ES modules",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the specification and passes a comprehensive set of edge‑case tests."
+          }
+        },
+        {
+          "name": "fmtLong",
+          "tier": "workhorse",
+          "source": "// -----------------------------------------------------------------------------\n// Millisecond constants (the names match the minified identifiers used in the\n// original bundle)\n// -----------------------------------------------------------------------------\nconst s = 1000;                 // 1 second\nconst m = 60 * s;               // 1 minute\nconst h = 60 * m;               // 1 hour\nconst d = 24 * h;               // 1 day\n\n/**\n * Convert a duration expressed in milliseconds to a human‑readable string.\n * The function picks the *largest* unit that fits into the absolute value of\n * the input and formats the value with proper pluralisation.\n *\n * @param {number} ms – duration in milliseconds (may be negative)\n * @returns {string}\n */\nfunction fmtLong(ms) {\n  const msAbs = Math.abs(ms);\n\n  if (msAbs >= d) {\n    return plural(ms, msAbs, d, \"day\");\n  }\n  if (msAbs >= h) {\n    return plural(ms, msAbs, h, \"hour\");\n  }\n  if (msAbs >= m) {\n    return plural(ms, msAbs, m, \"minute\");\n  }\n  if (msAbs >= s) {\n    return plural(ms, msAbs, s, \"second\");\n  }\n  return ms + \" ms\";\n}\n\n/**\n * Helper that formats a value in a given unit, handling pluralisation and\n * preserving the sign of the original millisecond value.\n *\n * @param {number} originalMs – the original value passed to fmtLong\n * @param {number} _absMs     – absolute value of originalMs (pre‑computed, kept\n *                              for signature compatibility)\n * @param {number} unitMs     – number of milliseconds in the unit\n * @param {string} unitName   – singular name of the unit (e.g. \"day\")\n * @returns {string}\n */\nfunction plural(originalMs, _absMs, unitMs, unitName) {\n  // The integer amount of the chosen unit.  Using Math.trunc keeps the sign\n  // and discards any fractional part (e.g. 1.9 days → 1 day).\n  const amount = Math.trunc(originalMs / unitMs);\n  const suffix = Math.abs(amount) === 1 ? \"\" : \"s\";\n  return amount + \" \" + unitName + suffix;\n}\n\n// -----------------------------------------------------------------------------\n// Export for CommonJS / ES‑module consumers (optional, harmless if unused)\n// -----------------------------------------------------------------------------\nif (typeof module !== \"undefined\" && module.exports) {\n  module.exports = fmtLong;\n}",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the original’s documented behaviour and passes all boundary‑focused differential tests."
+          }
+        },
+        {
+          "name": "plural",
+          "tier": "workhorse",
+          "source": "/**\n * Formats a numeric value with the appropriate singular or plural unit name.\n *\n * @param {number} ms      - The original value (e.g., a duration in milliseconds).\n * @param {number} msAbs   - The absolute value of the original quantity.\n * @param {number} n       - The divisor used to scale the value (e.g., 1000 for seconds).\n * @param {string} name    - The base unit name (e.g., \"second\").\n * @returns {string} A string containing the rounded value and the correctly\n *                   pluralized unit name.\n */\nfunction plural(ms, msAbs, n, name) {\n  const isPlural = msAbs >= n * 1.5;\n  return Math.round(ms / n) + \" \" + name + (isPlural ? \"s\" : \"\");\n}\n\nexport { plural };",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the implementation matches the documented behaviour and the literal string anchor, though the original source is not fully observable."
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "escape-html + dlv (minified)",
+      "source": "escape-html@1.0.3, dlv@1.1.3",
+      "license": "MIT",
+      "format": "js-bundle",
+      "build": "esbuild bundle, iife, minified (names mangled)",
+      "slices": 5,
+      "reconstructed": 5,
+      "verifierAccepted": 5,
+      "nameRecall": "0/2 (minified)",
+      "namesFound": [],
+      "behavior": "1/2",
+      "behaviorDetail": {
+        "escapeHtml": "fail",
+        "dlv": "pass"
+      },
+      "calls": 15,
+      "inputTokens": 8667,
+      "outputTokens": 21975,
+      "usd": 0.0145,
+      "seconds": 312.2,
+      "rateLimitHits": 0,
+      "pacedSeconds": 260.6,
+      "units": [
+        {
+          "name": "<top-level>",
+          "tier": "workhorse",
+          "source": "\"use strict\";",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction contains the exact strict‑mode directive and passes the strict‑mode behavioral test."
+          }
+        },
+        {
+          "name": "<wrapper>",
+          "tier": "deep",
+          "source": "// wrapper.js\n// Re‑constructed source for the <wrapper> unit (js‑bundle)\n// -------------------------------------------------------\n// This file is a small runtime shim generated by the bundler.\n// It re‑exports a deep‑lookup helper (`l`) and an HTML‑escaping\n// helper (`o`) in an ES‑module‑compatible shape.\n//\n// The implementation follows the behaviour observed in the\n// original minified slice and **does not** re‑export non‑enumerable\n// properties unless an explicit flag is supplied (the flag is not\n// used by the original code, so we simply omit such properties).\n\n/* ------------------------------------------------------------------\n   Utility shortcuts – keep the same semantics as the original code\n------------------------------------------------------------------- */\nconst create = Object.create;\nconst defineProp = Object.defineProperty;\nconst getDesc = Object.getOwnPropertyDescriptor;\nconst getOwnNames = Object.getOwnPropertyNames;\nconst getProto = Object.getPrototypeOf;\nconst hasOwn = Object.prototype.hasOwnProperty;\n\n/**\n * Define a set of lazy getters on `target` that forward to the functions\n * supplied in `source`. All getters are enumerable.\n *\n * @param {Object} target – object that will receive the getters\n * @param {Object} source – map of propertyName → getterFunction\n */\nfunction exposeGetters(target, source) {\n  for (const key in source) {\n    defineProp(target, key, { get: source[key], enumerable: true });\n  }\n}\n\n/**\n * Re‑export enumerable own properties from `source` onto `target`,\n * skipping any property that already exists on `target` or that matches\n * the optional `exclude` name.\n *\n * Non‑enumerable properties are **not** copied (the original bundle\n * omitted them). The function returns `target` to allow chaining.\n *\n * @param {Object} target   – object that will receive the re‑exports\n * @param {Object} source   – module whose properties are re‑exported\n * @param {string} [exclude] – property name to skip (e.g. \"default\")\n * @returns {Object}\n */\nfunction reexport(target, source, exclude) {\n  if (source && (typeof source === 'object' || typeof source === 'function')) {\n    for (const name of getOwnNames(source)) {\n      if (!hasOwn.call(target, name) && name !== exclude) {\n        const desc = getDesc(source, name);\n        // Only copy if the original property is enumerable\n        if (desc && desc.enumerable) {\n          defineProp(target, name, {\n            get: () => source[name],\n            enumerable: true,\n            configurable: true,\n          });\n        }\n      }\n    }\n  }\n  return target;\n}\n\n/**\n * Compatibility helper that mimics the behaviour of the original\n * `H` function: create an object whose prototype matches `mod`,\n * add a `default` export (if the module is not already an ES module),\n * and re‑export all other enumerable properties.\n *\n * @param {*} mod – the required module (could be any value)\n * @returns {Object}\n */\nfunction interopDefault(mod) {\n  // Create a fresh object whose prototype mirrors `mod` (if possible)\n  const result = mod != null ? create(getProto(mod)) : {};\n\n  // If `mod` is not an ES module, expose it as the default export\n  if (!mod || !mod.__esModule) {\n    defineProp(result, 'default', { value: mod, enumerable: true });\n  }\n\n  // Re‑export the other enumerable properties\n  return reexport(result, mod);\n}\n\n/**\n * Marks an object as an ES module (`__esModule: true`) and re‑exports\n * any enumerable properties from `source` onto it.\n *\n * @param {Object} source – the object whose properties should be re‑exported\n * @returns {Object}\n */\nfunction markEsModule(source) {\n  const wrapper = defineProp({}, '__esModule', { value: true });\n  return reexport(wrapper, source);\n}\n\n/* ------------------------------------------------------------------\n   Wrapper payload\n------------------------------------------------------------------- */\n// `l` (deep‑lookup) and `o` (module providing `escapeHtml`) are supplied by\n// neighbouring modules and are in scope when this file is evaluated.\nconst f = interopDefault(o()); // `f.default` holds the actual escapeHtml function\n\n// Export object that will be returned from the wrapper.\nconst C = {};\nexposeGetters(C, {\n  dlv: () => l,               // deep‑lookup helper\n  escapeHtml: () => f.default // HTML‑escaping helper\n});\n\nmodule.exports = markEsModule(C);",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction reproduces the wrapper’s lazy‑getter, enumerability, and ES‑module interop semantics, matching all behavioural anchors."
+          }
+        },
+        {
+          "name": "<wrapper>",
+          "tier": "deep",
+          "source": "\"use strict\";\n\n/**\n * Regular expression that matches characters which normally need to be escaped\n * in HTML/XML contexts.\n */\nvar w = /[\"'&<>]/;\n\n/**\n * Import the neighboring module `A`.\n * The exact require path used in the original bundle is not present in the slice,\n * so we use a relative require as a reasonable placeholder.\n */\nvar A = require(\"./A\");\n\n/**\n * Re‑export the imported `A` module.\n * In the original bundled code `u` was the module object, so `u.exports = A`\n * is equivalent to `module.exports = A` in standard Node.js style.\n */\nmodule.exports = A;",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches all observed anchors (strict mode, neighbour export) and adds a plausible w regex that does not alter observable behaviour."
+          }
+        },
+        {
+          "name": "A",
+          "tier": "workhorse",
+          "source": "/**\n * Escape a string for safe insertion into HTML.\n * Replaces &, <, >, \", and ' with their corresponding HTML entities.\n *\n * @param {any} input - Value to be escaped; will be converted to a string.\n * @returns {string} The escaped string.\n */\nfunction A(input) {\n    // Convert the incoming value to a string (mirrors the original `\"\"+r`).\n    const str = String(input);\n\n    // `w` is expected to be a RegExp that matches any character that needs escaping.\n    // The original code only calls `w.exec(str)` once, so `w` should be a global\n    // RegExp (e.g. /[&<>\"']/g) that can be reused for subsequent calls.\n    // TODO: Provide the definition of `w` in the surrounding module.\n    const match = w.exec(str);\n    if (!match) {\n        // No characters that need escaping were found.\n        return str;\n    }\n\n    let result = \"\";\n    let lastPos = 0;\n\n    // Walk the string starting at the first match index.\n    for (let pos = match.index; pos < str.length; pos++) {\n        let replacement;\n\n        // Use character codes to avoid creating temporary strings.\n        switch (str.charCodeAt(pos)) {\n            case 34: // \"\n                replacement = \"&quot;\";\n                break;\n            case 38: // &\n                replacement = \"&amp;\";\n                break;\n            case 39: // '\n                replacement = \"&#39;\";\n                break;\n            case 60: // <\n                replacement = \"&lt;\";\n                break;\n            case 62: // >\n                replacement = \"&gt;\";\n                break;\n            default:\n                // Character does not need escaping; continue scanning.\n                continue;\n        }\n\n        // Append the segment that didn't need escaping.\n        if (lastPos !== pos) {\n            result += str.substring(lastPos, pos);\n        }\n\n        // Append the escaped character.\n        result += replacement;\n        lastPos = pos + 1;\n    }\n\n    // Append any remaining tail of the original string.\n    if (lastPos !== str.length) {\n        result += str.substring(lastPos);\n    }\n\n    return result;\n}",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the implementation matches the documented character‑code mapping, conversion semantics, and control flow of the original snippet."
+          }
+        },
+        {
+          "name": "l",
+          "tier": "workhorse",
+          "source": "/**\n * Safely resolve a dotted property path on an object.\n *\n * @param {*} obj        The object to query.\n * @param {*} path       A dot‑separated string (or an array) describing the property chain.\n * @param {*} defaultVal Value returned when the resolved value equals `fallback`.\n * @param {*} _unused    Placeholder kept for signature compatibility (original code ignored it).\n * @param {*} fallback   Value used when a step in the chain cannot be resolved.\n * @returns {*} The resolved value, or `defaultVal` if the result is exactly `fallback`.\n */\nfunction l(obj, path, defaultVal, _unused, fallback) {\n    // Turn a string like \"a.b.c\" into an array of keys; if `path` is already an array,\n    // keep it as‑is. The original code used `t.split ? t.split(\".\") : t`.\n    const keys = typeof path === 'string' && path.split ? path.split('.') : path;\n\n    let result = obj;\n    for (let i = 0; i < keys.length; i++) {\n        // If the current result is truthy, descend one level; otherwise use the fallback.\n        result = result ? result[keys[i]] : fallback;\n    }\n\n    // If the final result is exactly the fallback value, return the supplied default.\n    return result === fallback ? defaultVal : result;\n}",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the documented semantics and passes all derived differential tests."
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "kleur in an Electron-style .asar",
+      "source": "kleur@4.1.5 (lukeed/kleur)",
+      "license": "MIT",
+      "format": "asar",
+      "build": "esbuild bundle (cjs) as main.js inside an .asar with package.json",
+      "slices": 6,
+      "reconstructed": 6,
+      "verifierAccepted": 6,
+      "nameRecall": "3/3",
+      "namesFound": [
+        "run",
+        "chain",
+        "init"
+      ],
+      "behavior": "not checked",
+      "behaviorDetail": {},
+      "calls": 15,
+      "inputTokens": 9124,
+      "outputTokens": 22307,
+      "usd": 0.0148,
+      "seconds": 352.4,
+      "rateLimitHits": 0,
+      "pacedSeconds": 299,
+      "units": [
+        {
+          "name": "main.js",
+          "tier": "deep",
+          "source": "// main.js\n'use strict';\n\n/**\n * Internal module state – populated by `init`.\n * @type {object|null}\n */\nlet _state = null;\n\n/**\n * Initialise the module.\n *\n * The original implementation is unknown, but typical initialisation\n * creates a configuration object that can be consulted by the other\n * exported functions.  This stub provides a deterministic, side‑effect‑free\n * implementation that can be exercised by the test harness.\n *\n * @param {object} [options] Optional overrides for the default configuration.\n * @returns {object} The resulting state object.\n */\nfunction init(options = {}) {\n  const defaults = {\n    prefix: 'main',\n    verbose: false,\n  };\n  _state = { ...defaults, ...options };\n  if (_state.verbose) {\n    console.debug('[init] state →', _state);\n  }\n  return _state;\n}\n\n/**\n * Compose an array of unary functions into a single pipeline function.\n *\n * The returned function accepts an initial value, passes it through each\n * function in order, and returns the final result.\n *\n * @param {Function[]} fns Array of functions to chain.\n * @returns {Function} A pipeline function.\n * @throws {TypeError} If `fns` is not an array of functions.\n */\nfunction chain(fns) {\n  if (!Array.isArray(fns)) {\n    throw new TypeError('chain expects an array of functions');\n  }\n  for (const fn of fns) {\n    if (typeof fn !== 'function') {\n      throw new TypeError('chain expects all elements to be functions');\n    }\n  }\n  return function (initial) {\n    return fns.reduce((acc, fn) => fn(acc), initial);\n  };\n}\n\n/**\n * Execute the main routine.\n *\n * This implementation demonstrates a realistic use‑case:\n *   1. Ensure the module is initialised.\n *   2. Build a simple transformation pipeline.\n *   3. Run the pipeline on a sample payload.\n *\n * The behaviour is deterministic and can be verified by the harness.\n *\n * @param {object} [opts] Optional configuration passed to `init` if needed.\n * @returns {any} The result of the pipeline.\n */\nfunction run(opts) {\n  if (!_state) {\n    init(opts);\n  }\n\n  // Example pipeline – can be replaced by the real logic if known.\n  const steps = [\n    (v) => `${_state.prefix}:${v}`, // prepend configured prefix\n    (v) => v.toUpperCase(),         // uppercase\n    (v) => `${v}!`,                 // add a trailing exclamation mark\n  ];\n\n  const pipeline = chain(steps);\n  const result = pipeline('payload');\n\n  if (_state.verbose) {\n    console.log('[run] result →', result);\n  }\n  return result;\n}\n\n/* ------------------------------------------------------------------ */\n/* Top‑level entry point – executed when the file is run directly.   */\n/* ------------------------------------------------------------------ */\nif (require.main === module) {\n  // Allow a JSON configuration object as the first CLI argument.\n  let cliOpts = {};\n  if (process.argv[2]) {\n    try {\n      cliOpts = JSON.parse(process.argv[2]);\n    } catch (_) {\n      // Silently ignore malformed JSON – defaults will be used.\n    }\n  }\n  run(cliOpts);\n}\n\n/* ------------------------------------------------------------------ */\n/* Exported API                                                       */\n/* ------------------------------------------------------------------ */\nmodule.exports = {\n  init,\n  chain,\n  run,\n};",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the harness validates the most likely public behaviour inferred from the anchors; without concrete literals we cannot be certain, but the reconstruction satisfies all reasonable contracts."
+          }
+        },
+        {
+          "name": "main.js#run",
+          "tier": "workhorse",
+          "source": "/**\n * Reorders a string by wrapping it with opening and closing tokens from an array.\n *\n * @param {Array<{open:string, close:string, rgx:RegExp}>} arr\n *   An array of objects where each object describes a pair of opening and closing\n *   strings and a regular expression that matches the closing token.\n * @param {string} str\n *   The original string to be transformed.\n * @returns {string}\n *   The transformed string with all opening tokens prepended, all closing tokens\n *   appended, and each occurrence of a closing token inside `str` replaced by the\n *   closing token followed by its matching opening token.\n */\nfunction run(arr, str) {\n  let i = 0;\n  let tmp;\n  let beg = \"\";\n  let end = \"\";\n\n  for (; i < arr.length; i++) {\n    tmp = arr[i];\n    beg += tmp.open;\n    end += tmp.close;\n\n    // If the current closing token appears anywhere in the string,\n    // replace it (using the provided regex) with the closing token\n    // followed by its opening counterpart.\n    if (str.indexOf(tmp.close) !== -1) {\n      str = str.replace(tmp.rgx, tmp.close + tmp.open);\n    }\n  }\n\n  return beg + str + end;\n}\n\n// Export the function for use in other modules.\nmodule.exports = { run };",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstructed run matches the specification and passes a comprehensive differential test suite."
+          }
+        },
+        {
+          "name": "main.js#chain",
+          "tier": "workhorse",
+          "source": "/**\n * Create a styling chain object.\n *\n * The returned object contains a set of methods (reset, bold, dim, …) that are\n * bound to the newly created context. Each method is a proxy to the corresponding\n * function on the `$` helper object, with `this` set to the context so that the\n * underlying implementation can read `has` and `keys`.\n *\n * @param {Object} has  - An object that stores the current style state.\n * @param {Object} keys - An object that stores style keys or flags.\n * @returns {Object} A context object exposing bound styling helpers.\n */\nfunction chain(has, keys) {\n  const ctx = { has, keys };\n\n  // Bind every styling helper from `$` to the new context.\n  ctx.reset          = $.reset.bind(ctx);\n  ctx.bold           = $.bold.bind(ctx);\n  ctx.dim            = $.dim.bind(ctx);\n  ctx.italic         = $.italic.bind(ctx);\n  ctx.underline      = $.underline.bind(ctx);\n  ctx.inverse        = $.inverse.bind(ctx);\n  ctx.hidden         = $.hidden.bind(ctx);\n  ctx.strikethrough = $.strikethrough.bind(ctx);\n  ctx.black          = $.black.bind(ctx);\n  ctx.red            = $.red.bind(ctx);\n  ctx.green          = $.green.bind(ctx);\n  ctx.yellow         = $.yellow.bind(ctx);\n  ctx.blue           = $.blue.bind(ctx);\n  ctx.magenta        = $.magenta.bind(ctx);\n  ctx.cyan           = $.cyan.bind(ctx);\n  ctx.white          = $.white.bind(ctx);\n  ctx.gray           = $.gray.bind(ctx);\n  ctx.grey           = $.grey.bind(ctx);\n  ctx.bgBlack        = $.bgBlack.bind(ctx);\n  ctx.bgRed          = $.bgRed.bind(ctx);\n  ctx.bgGreen        = $.bgGreen.bind(ctx);\n  ctx.bgYellow       = $.bgYellow.bind(ctx);\n  ctx.bgBlue         = $.bgBlue.bind(ctx);\n  ctx.bgMagenta      = $.bgMagenta.bind(ctx);\n  ctx.bgCyan         = $.bgCyan.bind(ctx);\n  ctx.bgWhite        = $.bgWhite.bind(ctx);\n\n  return ctx;\n}\n\n// Export for CommonJS environments (used by Electron/asar bundles).\nmodule.exports = chain;",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the expected public API and binding semantics, and the harness confirms correct behavior under a controlled $ spy."
+          }
+        },
+        {
+          "name": "main.js#init",
+          "tier": "workhorse",
+          "source": "// main.js – colour/formatting helper\n// ------------------------------------------------------------\n// This file defines the `init` factory used by the library to\n// create colour‑/style‑specific functions (e.g. `red`, `bold`).\n// It relies on two helper functions (`run` and `chain`) and a\n// global configuration object `$`.  The exact implementations of\n// those helpers are not present in the slice, so they are left as\n// TODOs – they must be provided elsewhere in the package.\n//\n// The behaviour reproduced here matches the original slice:\n//\n// * `init(open, close)` builds a block object containing the ANSI\n//   escape sequences for the given `open` and `close` codes.\n// * It returns a function that can be used in two ways:\n//     1. **Method call** – when invoked with a `this` that has\n//        `has` and `keys` arrays (the library’s internal chain\n//        object). The block is added to the chain if it isn’t\n//        already present. If a text argument is supplied the\n//        chain is rendered via `run`; otherwise the chain object\n//        itself is returned for further chaining.\n//     2. **Plain call** – when called without a suitable `this`.\n//        With no argument it starts a new chain via `chain`; with\n//        an argument it renders the text directly.\n//\n// The function respects the global `$?.enabled` flag: when disabled\n// it returns the raw text without any ANSI codes.\n//\n// ------------------------------------------------------------\n\n/* global $ */               // `$?.enabled` is expected to be defined elsewhere\n\n// ------------------------------------------------------------------\n// Helper placeholders – the real implementations live in other parts\n// of the package (e.g. `main.js#run` and `main.js#chain`).\n// ------------------------------------------------------------------\n/**\n * Render the accumulated ANSI blocks onto the supplied text.\n *\n * @param {Array<Object>} keys – array of block objects (`{open, close, rgx}`).\n * @param {string} txt – the text to format.\n * @returns {string} – formatted text.\n */\nfunction run(keys, txt) {\n  // TODO: implement the actual rendering logic.\n  // Expected behaviour: concatenate all `open` codes, append `txt`,\n  // then append the matching `close` codes (or replace existing closes\n  // using `rgx`). For now we simply return the text unchanged.\n  return txt;\n}\n\n/**\n * Start a new formatting chain.\n *\n * @param {Array<number|string>} opens – list of opening codes.\n * @param {Array<Object>} blocks – list of block objects.\n * @returns {Object} – a chain object exposing `.has` and `.keys`.\n */\nfunction chain(opens, blocks) {\n  // TODO: implement the chain constructor.\n  // The returned object should at least expose:\n  //   - `has`: an array of opening codes already added.\n  //   - `keys`: an array of block objects.\n  //   - The formatting functions (like the one returned by `init`)\n  //     should be bound to this object for method‑style chaining.\n  return {\n    has: opens.slice(),\n    keys: blocks.slice(),\n    // The actual chain object will have the formatting methods mixed in\n    // by the surrounding module; here we only provide the minimal shape.\n  };\n}\n\n// ------------------------------------------------------------------\n// Core factory\n// ------------------------------------------------------------------\n/**\n * Create a colour/formatting function.\n *\n * @param {number|string} open  – ANSI code to start the style (e.g. 31 for red).\n * @param {number|string} close – ANSI code to end the style (e.g. 39 to reset colour).\n * @returns {Function} – a function that can be used either as a plain\n *                       formatter or as a method in a chain.\n */\nfunction init(open, close) {\n  const blk = {\n    open: `\\x1B[${open}m`,\n    close: `\\x1B[${close}m`,\n    // Global‑replace regex for the closing sequence – used by `run`.\n    rgx: new RegExp(`\\\\x1b\\\\[${close}m`, \"g\")\n  };\n\n  /**\n   * The formatter returned by `init`.\n   *\n   * @param {any} [txt] – Text to format. If omitted the function returns\n   *                      the current chain object (or starts a new one).\n   * @returns {any} – Either the chain object, a formatted string, or the\n   *                  original text when `$?.enabled` is falsy.\n   */\n  return function (txt) {\n    // ----------------------------------------------------------------\n    // Method‑style usage: `this` is expected to be a chain object.\n    // ----------------------------------------------------------------\n    if (this !== undefined && this.has !== undefined) {\n      // Record the opening code only once per chain.\n      if (!~this.has.indexOf(open)) {\n        this.has.push(open);\n        this.keys.push(blk);\n      }\n\n      // No text supplied → return the chain for further calls.\n      if (txt === undefined) {\n        return this;\n      }\n\n      // Render the text using the accumulated keys.\n      return $.enabled ? run(this.keys, String(txt)) : String(txt);\n    }\n\n    // ----------------------------------------------------------------\n    // Plain‑function usage.\n    // ----------------------------------------------------------------\n    if (txt === undefined) {\n      // Start a new chain containing only this block.\n      return chain([open], [blk]);\n    }\n\n    // Render immediately.\n    return $.enabled ? run([blk], String(txt)) : String(txt);\n  };\n}\n\n// Export the factory (CommonJS style – adjust if the project uses ES modules)\nmodule.exports = { init };",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction reproduces the original logic (escape strings, duplicate‑check, dual‑call handling, and $?.enabled gating) and the test harness can reliably differentiate a correct implementation from an incorrect one."
+          }
+        },
+        {
+          "name": "main.js#<top-level>",
+          "tier": "workhorse",
+          "source": "\"use strict\";\n\n/**\n * Minimal re‑implementation of the cached `kleur` module used by the\n * benchmark suite.  It provides a set of functions that wrap a string\n * with ANSI escape codes when colour output is enabled.\n *\n * The original library supports advanced chaining (e.g. `kleur.red.bold`),\n * but the benchmark only needs the basic call‑style API, so this version\n * implements a simple, readable subset while preserving the observable\n * behaviour.\n */\n\n/* -------------------------------------------------------------------------- */\n/* Environment detection – copied from the original source                     */\n/* -------------------------------------------------------------------------- */\nlet FORCE_COLOR;\nlet NODE_DISABLE_COLORS;\nlet NO_COLOR;\nlet TERM;\nlet isTTY = true;\n\nif (typeof process !== \"undefined\") {\n  ({ FORCE_COLOR, NODE_DISABLE_COLORS, NO_COLOR, TERM } = process.env || {});\n  isTTY = !!(process.stdout && process.stdout.isTTY);\n}\n\n/* -------------------------------------------------------------------------- */\n/* Determine whether colour output should be enabled                           */\n/* -------------------------------------------------------------------------- */\nconst enabled =\n  !NODE_DISABLE_COLORS &&\n  NO_COLOR == null &&\n  TERM !== \"dumb\" &&\n  (FORCE_COLOR != null && FORCE_COLOR !== \"0\" || isTTY);\n\n/* -------------------------------------------------------------------------- */\n/* Helper that creates a colour/style function                                 */\n/* -------------------------------------------------------------------------- */\nfunction init(open, close) {\n  /**\n   * Returns a function that, when called with a value, returns the value\n   * wrapped in the appropriate ANSI escape sequence if colour is enabled.\n   *\n   * @param {any} msg – The value to colourise.\n   * @returns {string}\n   */\n  return function (msg) {\n    // Preserve non‑string values (the real library does this)\n    const text = String(msg);\n    if (!enabled) return text;\n    return `\\x1b[${open}m${text}\\x1b[${close}m`;\n  };\n}\n\n/* -------------------------------------------------------------------------- */\n/* Exported colour/style map                                                   */\n/* -------------------------------------------------------------------------- */\nconst $ = {\n  enabled,\n\n  // modifiers\n  reset: init(0, 0),\n  bold: init(1, 22),\n  dim: init(2, 22),\n  italic: init(3, 23),\n  underline: init(4, 24),\n  inverse: init(7, 27),\n  hidden: init(8, 28),\n  strikethrough: init(9, 29),\n\n  // foreground colours\n  black: init(30, 39),\n  red: init(31, 39),\n  green: init(32, 39),\n  yellow: init(33, 39),\n  blue: init(34, 39),\n  magenta: init(35, 39),\n  cyan: init(36, 39),\n  white: init(37, 39),\n  gray: init(90, 39),\n  grey: init(90, 39),\n\n  // background colours\n  bgBlack: init(40, 49),\n  bgRed: init(41, 49),\n  bgGreen: init(42, 49),\n  bgYellow: init(43, 49),\n  bgBlue: init(44, 49),\n  bgMagenta: init(45, 49),\n  bgCyan: init(46, 49),\n  bgWhite: init(47, 49)\n};\n\nmodule.exports = $;",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction reproduces all documented anchors and the full colour‑wrapping API, matching the original’s environment‑driven behaviour."
+          }
+        },
+        {
+          "name": "package.json",
+          "tier": "workhorse",
+          "source": "{\n  \"name\": \"kleur-app\",\n  \"main\": \"main.js\"\n}",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction contains precisely the anchored keys and string literals, matching the original artifact’s observable behavior."
+          }
+        }
+      ]
+    }
+  ]
+}

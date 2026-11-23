@@ -1,0 +1,251 @@
+{
+  "generated": "2026-11-23T04:48:39.095Z",
+  "provider": "openai-compatible endpoint https://api.groq.com/openai/v1 (cap $2)",
+  "dryRun": false,
+  "verify": true,
+  "maxUnits": 12,
+  "totalUsd": 0.0299,
+  "totalRateLimitHits": 0,
+  "label": "before-r2",
+  "rows": [
+    {
+      "fixture": "ms",
+      "source": "ms@2.1.3 (vercel/ms)",
+      "license": "MIT",
+      "format": "js-bundle",
+      "build": "esbuild bundle, iife, not minified",
+      "slices": 1,
+      "reconstructed": 1,
+      "verifierAccepted": 1,
+      "nameRecall": "4/4",
+      "namesFound": [
+        "parse",
+        "fmtShort",
+        "fmtLong",
+        "plural"
+      ],
+      "behavior": "3/3",
+      "behaviorDetail": {
+        "parse": "pass",
+        "fmtShort": "pass",
+        "ms(n, {long:true})": "pass"
+      },
+      "calls": 5,
+      "inputTokens": 7415,
+      "outputTokens": 9307,
+      "usd": 0.0067,
+      "seconds": 100.6,
+      "rateLimitHits": 0,
+      "pacedSeconds": 78.5,
+      "units": [
+        {
+          "name": "bundle",
+          "tier": "deep",
+          "source": "\"use strict\";\n\nvar lib = (() => {\n  // Helper to get the first property name of an object (used by __commonJS)\n  const __getOwnPropNames = Object.getOwnPropertyNames;\n\n  /**\n   * Minimal CommonJS wrapper used by the original bundle.\n   * It executes the module factory only once and caches the exports.\n   *\n   * @param {Object} cb   Object whose first property is the factory function.\n   * @param {Object} mod  Optional pre‑filled module object.\n   * @returns {Function}  A function that returns the cached `module.exports`.\n   */\n  const __commonJS = (cb, mod) => function __require() {\n    try {\n      return mod || (0, cb[__getOwnPropNames(cb)[0]])(\n        (mod = { exports: {} }).exports,\n        mod\n      ), mod.exports;\n    } catch (e) {\n      // Preserve the original behaviour: clear the cache on error.\n      mod = 0;\n      throw e;\n    }\n  };\n\n  // -------------------------------------------------------------------------\n  // benchmarks/reconstruct/.cache/ms/index.js\n  // -------------------------------------------------------------------------\n  var require_index = __commonJS({\n    \"benchmarks/reconstruct/.cache/ms/index.js\"(exports, module) {\n      // Time constants (in milliseconds)\n      const SECOND = 1e3;\n      const MINUTE = SECOND * 60;\n      const HOUR   = MINUTE * 60;\n      const DAY    = HOUR * 24;\n      const WEEK   = DAY * 7;\n      const YEAR   = DAY * 365.25;\n\n      /**\n       * Main exported function.\n       *\n       * @param {string|number} val      Value to parse or format.\n       * @param {Object} [options]       Optional configuration.\n       * @param {boolean} [options.long] When true and `val` is a number,\n       *                                  a long format (e.g. \"2 hours\") is returned.\n       * @returns {number|string}        Milliseconds (if parsing) or formatted string.\n       */\n      module.exports = function (val, options) {\n        options = options || {};\n        const type = typeof val;\n\n        if (type === \"string\" && val.length > 0) {\n          return parse(val);\n        }\n\n        if (type === \"number\" && isFinite(val)) {\n          return options.long ? fmtLong(val) : fmtShort(val);\n        }\n\n        throw new Error(\n          \"val is not a non-empty string or a valid number. val=\" +\n            JSON.stringify(val)\n        );\n      };\n\n      /**\n       * Parse a human‑readable time string into milliseconds.\n       *\n       * Supported units (case‑insensitive):\n       *   years / yr / yrs / y\n       *   weeks / w\n       *   days / d\n       *   hours / hr / hrs / h\n       *   minutes / min / mins / m\n       *   seconds / sec / secs / s\n       *   milliseconds / ms / msec / msecs\n       *\n       * @param {string} str\n       * @returns {number|undefined}\n       */\n      function parse(str) {\n        str = String(str);\n        if (str.length > 100) return undefined;\n\n        const match = /^(-?(?:\\d+)?\\.?\\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(\n          str\n        );\n        if (!match) return undefined;\n\n        const n = parseFloat(match[1]);\n        const unit = (match[2] || \"ms\").toLowerCase();\n\n        switch (unit) {\n          case \"years\":\n          case \"year\":\n          case \"yrs\":\n          case \"yr\":\n          case \"y\":\n            return n * YEAR;\n          case \"weeks\":\n          case \"week\":\n          case \"w\":\n            return n * WEEK;\n          case \"days\":\n          case \"day\":\n          case \"d\":\n            return n * DAY;\n          case \"hours\":\n          case \"hour\":\n          case \"hrs\":\n          case \"hr\":\n          case \"h\":\n            return n * HOUR;\n          case \"minutes\":\n          case \"minute\":\n          case \"mins\":\n          case \"min\":\n          case \"m\":\n            return n * MINUTE;\n          case \"seconds\":\n          case \"second\":\n          case \"secs\":\n          case \"sec\":\n          case \"s\":\n            return n * SECOND;\n          case \"milliseconds\":\n          case \"millisecond\":\n          case \"msecs\":\n          case \"msec\":\n          case \"ms\":\n            return n;\n          default:\n            return undefined;\n        }\n      }\n\n      /**\n       * Short format (e.g. \"2h\", \"5m\").\n       *\n       * @param {number} ms\n       * @returns {string}\n       */\n      function fmtShort(ms) {\n        const msAbs = Math.abs(ms);\n        if (msAbs >= DAY) return Math.round(ms / DAY) + \"d\";\n        if (msAbs >= HOUR) return Math.round(ms / HOUR) + \"h\";\n        if (msAbs >= MINUTE) return Math.round(ms / MINUTE) + \"m\";\n        if (msAbs >= SECOND) return Math.round(ms / SECOND) + \"s\";\n        return ms + \"ms\";\n      }\n\n      /**\n       * Long format (e.g. \"2 hours\", \"1 day\").\n       *\n       * @param {number} ms\n       * @returns {string}\n       */\n      function fmtLong(ms) {\n        const msAbs = Math.abs(ms);\n        if (msAbs >= DAY) return plural(ms, msAbs, DAY, \"day\");\n        if (msAbs >= HOUR) return plural(ms, msAbs, HOUR, \"hour\");\n        if (msAbs >= MINUTE) return plural(ms, msAbs, MINUTE, \"minute\");\n        if (msAbs >= SECOND) return plural(ms, msAbs, SECOND, \"second\");\n        return ms + \" ms\";\n      }\n\n      /**\n       * Helper for `fmtLong` – decides whether to pluralise the unit name.\n       *\n       * The original library pluralises when the absolute rounded value is **not**\n       * exactly 1 (i.e., 1 → singular, everything else → plural).\n       *\n       * @param {number} ms   Original millisecond value (may be negative).\n       * @param {number} msAbs Absolute value of `ms`.\n       * @param {number} n    Milliseconds per unit (e.g. `DAY`).\n       * @param {string} name Singular unit name (e.g. \"day\").\n       * @returns {string}\n       */\n      function plural(ms, msAbs, n, name) {\n        const rounded = Math.round(ms / n);\n        const isPlural = Math.abs(rounded) !== 1;\n        return rounded + \" \" + name + (isPlural ? \"s\" : \"\");\n      }\n    }\n  });\n\n  // Export the module's public API.\n  return require_index();\n})();",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the implementation matches all documented anchors and reproduces the original library’s semantics."
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "escape-html + dlv (minified)",
+      "source": "escape-html@1.0.3, dlv@1.1.3",
+      "license": "MIT",
+      "format": "js-bundle",
+      "build": "esbuild bundle, iife, minified (names mangled)",
+      "slices": 1,
+      "reconstructed": 1,
+      "verifierAccepted": 1,
+      "nameRecall": "2/2 (minified)",
+      "namesFound": [
+        "escapeHtml",
+        "dlv"
+      ],
+      "behavior": "2/2",
+      "behaviorDetail": {
+        "escapeHtml": "pass",
+        "dlv": "pass"
+      },
+      "calls": 3,
+      "inputTokens": 2083,
+      "outputTokens": 4279,
+      "usd": 0.0029,
+      "seconds": 43.3,
+      "rateLimitHits": 0,
+      "pacedSeconds": 32.9,
+      "units": [
+        {
+          "name": "bundle",
+          "tier": "workhorse",
+          "source": "/**\n * Deep‑lookup helper (dlv)\n *\n * @param {Object} obj          The object to traverse.\n * @param {string|string[]} path   Dot‑separated string or array of keys.\n * @param {*} [fallback]        Value to return when the lookup fails.\n * @returns {*}                 The found value or the fallback.\n *\n * The implementation mirrors the original minified version:\n *   - If `path` is a string it is split on “.”.\n *   - Traversal stops as soon as a segment is missing.\n *   - If the final result is `undefined` the `fallback` is returned.\n */\nfunction dlv(obj, path, fallback) {\n  const parts = typeof path === 'string' ? path.split('.') : path;\n  let result = obj;\n\n  for (const key of parts) {\n    // If the current result is nullish we cannot continue.\n    if (result == null) {\n      result = undefined;\n      break;\n    }\n    result = result[key];\n  }\n\n  return result === undefined ? fallback : result;\n}\n\n/**\n * HTML‑escaping helper (escapeHtml)\n *\n * @param {*} input  Anything that can be stringified.\n * @returns {string} The input with &, <, >, \", and ' escaped.\n *\n * The algorithm follows the original source line‑by‑line:\n *   1. Convert the input to a string.\n *   2. Quickly return if no escapable characters are present.\n *   3. Walk the string from the first match, appending unchanged\n *      fragments and the appropriate HTML entity for each special char.\n */\nfunction escapeHtml(input) {\n  const str = '' + input;\n  const firstMatch = /[\"'&<>]/.exec(str);\n  if (!firstMatch) return str;\n\n  let result = '';\n  let last = 0;\n\n  // Start scanning at the index of the first escapable character.\n  for (let i = firstMatch.index; i < str.length; i++) {\n    let entity;\n    switch (str.charCodeAt(i)) {\n      case 34: // \"\n        entity = '&quot;';\n        break;\n      case 38: // &\n        entity = '&amp;';\n        break;\n      case 39: // '\n        entity = '&#39;';\n        break;\n      case 60: // <\n        entity = '&lt;';\n        break;\n      case 62: // >\n        entity = '&gt;';\n        break;\n      default:\n        continue; // Not an escapable character.\n    }\n\n    // Append the substring that precedes the current special character.\n    if (last !== i) {\n      result += str.substring(last, i);\n    }\n\n    // Append the escaped entity and move the cursor past the character.\n    result += entity;\n    last = i + 1;\n  }\n\n  // Append any trailing part of the original string.\n  if (last !== str.length) {\n    result += str.substring(last);\n  }\n\n  return result;\n}\n\n// Export the two utilities in a CommonJS‑compatible way.\nmodule.exports = {\n  dlv,\n  escapeHtml,\n};",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the supplied source faithfully reproduces the original bundle’s observable behavior."
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "kleur in an Electron-style .asar",
+      "source": "kleur@4.1.5 (lukeed/kleur)",
+      "license": "MIT",
+      "format": "asar",
+      "build": "esbuild bundle (cjs) as main.js inside an .asar with package.json",
+      "slices": 2,
+      "reconstructed": 2,
+      "verifierAccepted": 2,
+      "nameRecall": "3/3",
+      "namesFound": [
+        "run",
+        "chain",
+        "init"
+      ],
+      "behavior": "not checked",
+      "behaviorDetail": {},
+      "calls": 5,
+      "inputTokens": 3911,
+      "outputTokens": 5425,
+      "usd": 0.0038,
+      "seconds": 125.9,
+      "rateLimitHits": 0,
+      "pacedSeconds": 112.1,
+      "units": [
+        {
+          "name": "main.js",
+          "tier": "workhorse",
+          "source": "\"use strict\";\n\n/**\n * Minimal implementation of the `kleur` library.\n * This file is used by the benchmark suite and mirrors the original source\n * (https://github.com/jorgebucaran/kleur) but stripped down to the essentials.\n *\n * The module exports an object `$` whose properties are functions that wrap a\n * string with ANSI escape codes for styling terminal output.  The exported\n * functions can be chained, e.g. `$.red.bold('text')`.\n *\n * The implementation respects the following environment variables:\n *\n *   - FORCE_COLOR:   forces colour output when set to a non‑zero value.\n *   - NODE_DISABLE_COLORS: disables colours when truthy.\n *   - NO_COLOR:      disables colours when defined.\n *   - TERM:          disables colours when equal to \"dumb\".\n *\n * Colours are only enabled when the output stream is a TTY unless forced.\n */\n\nlet FORCE_COLOR;\nlet NODE_DISABLE_COLORS;\nlet NO_COLOR;\nlet TERM;\nlet isTTY = true;\n\n// Detect environment when running under Node.js\nif (typeof process !== \"undefined\") {\n  ({ FORCE_COLOR, NODE_DISABLE_COLORS, NO_COLOR, TERM } = process.env || {});\n  isTTY = !!(process.stdout && process.stdout.isTTY);\n}\n\n/**\n * Core object that holds the enabled flag and all style functions.\n */\nconst $ = {\n  // Enable colours only when not explicitly disabled and when the terminal\n  // supports it (or when forced).\n  enabled:\n    !NODE_DISABLE_COLORS &&\n    NO_COLOR == null &&\n    TERM !== \"dumb\" &&\n    (FORCE_COLOR != null && FORCE_COLOR !== \"0\" || isTTY),\n\n  // Modifiers\n  reset: init(0, 0),\n  bold: init(1, 22),\n  dim: init(2, 22),\n  italic: init(3, 23),\n  underline: init(4, 24),\n  inverse: init(7, 27),\n  hidden: init(8, 28),\n  strikethrough: init(9, 29),\n\n  // Foreground colours\n  black: init(30, 39),\n  red: init(31, 39),\n  green: init(32, 39),\n  yellow: init(33, 39),\n  blue: init(34, 39),\n  magenta: init(35, 39),\n  cyan: init(36, 39),\n  white: init(37, 39),\n  gray: init(90, 39),\n  grey: init(90, 39),\n\n  // Background colours\n  bgBlack: init(40, 49),\n  bgRed: init(41, 49),\n  bgGreen: init(42, 49),\n  bgYellow: init(43, 49),\n  bgBlue: init(44, 49),\n  bgMagenta: init(45, 49),\n  bgCyan: init(46, 49),\n  bgWhite: init(47, 49)\n};\n\n/**\n * Apply a list of style blocks to a string, handling nested resets.\n *\n * @param {Array<{open:string, close:string, rgx:RegExp}>} arr - style blocks\n * @param {string} str - the text to style\n * @returns {string}\n */\nfunction run(arr, str) {\n  let beg = \"\";\n  let end = \"\";\n\n  for (let i = 0; i < arr.length; i++) {\n    const blk = arr[i];\n    beg += blk.open;\n    end += blk.close;\n\n    // If the string already contains a closing code for this block,\n    // swap the order so that nesting works correctly.\n    if (str.indexOf(blk.close) !== -1) {\n      str = str.replace(blk.rgx, blk.close + blk.open);\n    }\n  }\n\n  return beg + str + end;\n}\n\n/**\n * Create a chainable context for a set of active styles.\n *\n * @param {number[]} has   - list of opening codes already applied\n * @param {Array} keys     - list of style block objects already applied\n * @returns {object}       - a context where each style method is bound\n */\nfunction chain(has, keys) {\n  const ctx = { has, keys };\n\n  // Bind every style function to the new context.\n  ctx.reset = $.reset.bind(ctx);\n  ctx.bold = $.bold.bind(ctx);\n  ctx.dim = $.dim.bind(ctx);\n  ctx.italic = $.italic.bind(ctx);\n  ctx.underline = $.underline.bind(ctx);\n  ctx.inverse = $.inverse.bind(ctx);\n  ctx.hidden = $.hidden.bind(ctx);\n  ctx.strikethrough = $.strikethrough.bind(ctx);\n  ctx.black = $.black.bind(ctx);\n  ctx.red = $.red.bind(ctx);\n  ctx.green = $.green.bind(ctx);\n  ctx.yellow = $.yellow.bind(ctx);\n  ctx.blue = $.blue.bind(ctx);\n  ctx.magenta = $.magenta.bind(ctx);\n  ctx.cyan = $.cyan.bind(ctx);\n  ctx.white = $.white.bind(ctx);\n  ctx.gray = $.gray.bind(ctx);\n  ctx.grey = $.grey.bind(ctx);\n  ctx.bgBlack = $.bgBlack.bind(ctx);\n  ctx.bgRed = $.bgRed.bind(ctx);\n  ctx.bgGreen = $.bgGreen.bind(ctx);\n  ctx.bgYellow = $.bgYellow.bind(ctx);\n  ctx.bgBlue = $.bgBlue.bind(ctx);\n  ctx.bgMagenta = $.bgMagenta.bind(ctx);\n  ctx.bgCyan = $.bgCyan.bind(ctx);\n  ctx.bgWhite = $.bgWhite.bind(ctx);\n\n  return ctx;\n}\n\n/**\n * Initialise a style function.\n *\n * @param {number} open   - ANSI code to start the style\n * @param {number} close  - ANSI code to end the style\n * @returns {function(string=):string|object}\n */\nfunction init(open, close) {\n  const blk = {\n    open: `\\x1B[${open}m`,\n    close: `\\x1B[${close}m`,\n    rgx: new RegExp(`\\\\x1b\\\\[${close}m`, \"g\")\n  };\n\n  /**\n   * The actual style function.\n   *\n   * When called with a string it returns the styled string.\n   * When called without arguments it returns a chainable context.\n   *\n   * @param {string} [txt]\n   * @returns {string|object}\n   */\n  return function (txt) {\n    // If called as a method on a chainable context (`this` is set)\n    if (this !== undefined && this.has !== undefined) {\n      // Record the style if it hasn't been added yet.\n      if (!this.has.includes(open)) {\n        this.has.push(open);\n        this.keys.push(blk);\n      }\n\n      // No argument → return the context for further chaining.\n      if (txt === undefined) {\n        return this;\n      }\n\n      // With argument → apply accumulated styles.\n      return $.enabled ? run(this.keys, String(txt)) : String(txt);\n    }\n\n    // Called as a top‑level function (no chaining)\n    if (txt === undefined) {\n      // Return a fresh chainable context containing only this style.\n      return chain([open], [blk]);\n    }\n\n    // Direct usage: style the string immediately.\n    return $.enabled ? run([blk], String(txt)) : String(txt);\n  };\n}\n\n// Export the colour utility object.\nmodule.exports = $;",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches all documented behavioural anchors and reproduces the full colour‑styling API with correct environment handling."
+          }
+        },
+        {
+          "name": "package.json",
+          "tier": "workhorse",
+          "source": "{\n  \"name\": \"kleur-app\",\n  \"main\": \"main.js\"\n}",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction contains exactly the required keys with the correct literal values, matching all behavioral anchors."
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "colorsys (.pyc)",
+      "source": "CPython stdlib colorsys.py",
+      "license": "PSF-2.0",
+      "format": "pyc",
+      "build": "python3 -m py_compile",
+      "slices": 8,
+      "reconstructed": 8,
+      "verifierAccepted": 8,
+      "nameRecall": "7/7",
+      "namesFound": [
+        "rgb_to_yiq",
+        "yiq_to_rgb",
+        "rgb_to_hls",
+        "hls_to_rgb",
+        "_v",
+        "rgb_to_hsv",
+        "hsv_to_rgb"
+      ],
+      "behavior": "not checked",
+      "behaviorDetail": {},
+      "calls": 17,
+      "inputTokens": 9126,
+      "outputTokens": 25190,
+      "usd": 0.0165,
+      "seconds": 355,
+      "rateLimitHits": 0,
+      "pacedSeconds": 282.5,
+      "units": [
+        {
+          "name": "<module>",
+          "tier": "workhorse",
+          "source": "\"\"\"Conversion functions between RGB and other color systems.\n\nThis module provides two functions for each color system ABC:\n\n  rgb_to_abc(r, g, b) --> a, b, c\n  abc_to_rgb(a, b, c) --> r, g, b\n\nAll inputs and outputs are triples of floats in the range [0.0...1.0]\n(with the exception of I and Q, which covers a slightly larger range).\nInputs outside the valid range may cause exceptions or invalid outputs.\n\nSupported color systems:\nRGB: Red, Green, Blue components\nYIQ: Luminance, Chrominance (used by composite video signals)\nHLS: Hue, Luminance, Saturation\nHSV: Hue, Saturation, Value\n\"\"\"\n\n# Public names exported by ``from colorsys import *``\n__all__ = [\n    \"rgb_to_yiq\", \"yiq_to_rgb\",\n    \"rgb_to_hls\", \"hls_to_rgb\",\n    \"rgb_to_hsv\", \"hsv_to_rgb\",\n]\n\n# ----------------------------------------------------------------------\n# Constants used by the conversion algorithms\nONE_THIRD = 1.0 / 3.0\nONE_SIXTH = 1.0 / 6.0\nTWO_THIRD = 2.0 / 3.0\n\n# ----------------------------------------------------------------------\n# RGB <-> YIQ\ndef rgb_to_yiq(r: float, g: float, b: float) -> tuple[float, float, float]:\n    \"\"\"Convert an RGB triple to YIQ.\"\"\"\n    y = 0.299 * r + 0.587 * g + 0.114 * b\n    i = 0.596 * r - 0.274 * g - 0.322 * b\n    q = 0.211 * r - 0.523 * g + 0.312 * b\n    return y, i, q\n\n\ndef yiq_to_rgb(y: float, i: float, q: float) -> tuple[float, float, float]:\n    \"\"\"Convert a YIQ triple to RGB.\"\"\"\n    r = y + 0.956 * i + 0.621 * q\n    g = y - 0.272 * i - 0.647 * q\n    b = y - 1.106 * i + 1.703 * q\n    return r, g, b\n\n\n# ----------------------------------------------------------------------\n# RGB <-> HLS\ndef rgb_to_hls(r: float, g: float, b: float) -> tuple[float, float, float]:\n    \"\"\"Convert an RGB triple to HLS.\"\"\"\n    maxc = max(r, g, b)\n    minc = min(r, g, b)\n    l = (maxc + minc) / 2.0\n\n    if maxc == minc:                     # achromatic case\n        return 0.0, l, 0.0\n\n    if l <= 0.5:\n        s = (maxc - minc) / (maxc + minc)\n    else:\n        s = (maxc - minc) / (2.0 - maxc - minc)\n\n    rc = (maxc - r) / (maxc - minc)\n    gc = (maxc - g) / (maxc - minc)\n    bc = (maxc - b) / (maxc - minc)\n\n    if r == maxc:\n        h = bc - gc\n    elif g == maxc:\n        h = 2.0 + rc - bc\n    else:\n        h = 4.0 + gc - rc\n\n    h = (h / 6.0) % 1.0\n    return h, l, s\n\n\ndef hls_to_rgb(h: float, l: float, s: float) -> tuple[float, float, float]:\n    \"\"\"Convert an HLS triple to RGB.\"\"\"\n    if s == 0.0:                         # achromatic\n        return l, l, l\n\n    if l <= 0.5:\n        m2 = l * (1.0 + s)\n    else:\n        m2 = l + s - l * s\n    m1 = 2.0 * l - m2\n\n    r = _v(m1, m2, h + ONE_THIRD)\n    g = _v(m1, m2, h)\n    b = _v(m1, m2, h - ONE_THIRD)\n    return r, g, b\n\n\ndef _v(m1: float, m2: float, hue: float) -> float:\n    \"\"\"Helper for ``hls_to_rgb`` – computes a single RGB component.\"\"\"\n    hue = hue % 1.0\n    if hue < ONE_SIXTH:\n        return m1 + (m2 - m1) * hue * 6.0\n    if hue < 0.5:\n        return m2\n    if hue < TWO_THIRD:\n        return m1 + (m2 - m1) * (TWO_THIRD - hue) * 6.0\n    return m1\n\n\n# ----------------------------------------------------------------------\n# RGB <-> HSV\ndef rgb_to_hsv(r: float, g: float, b: float) -> tuple[float, float, float]:\n    \"\"\"Convert an RGB triple to HSV.\"\"\"\n    maxc = max(r, g, b)\n    minc = min(r, g, b)\n\n    v = maxc\n    if maxc == minc:                     # achromatic\n        return 0.0, 0.0, v\n\n    delta = maxc - minc\n    s = delta / maxc\n\n    rc = (maxc - r) / delta\n    gc = (maxc - g) / delta\n    bc = (maxc - b) / delta\n\n    if r == maxc:\n        h = bc - gc\n    elif g == maxc:\n        h = 2.0 + rc - bc\n    else:\n        h = 4.0 + gc - rc\n\n    h = (h / 6.0) % 1.0\n    return h, s, v\n\n\ndef hsv_to_rgb(h: float, s: float, v: float) -> tuple[float, float, float]:\n    \"\"\"Convert an HSV triple to RGB.\"\"\"\n    if s == 0.0:                         # achromatic (grey)\n        return v, v, v\n\n    i = int(h * 6.0)                     # sector 0 to 5\n    f = (h * 6.0) - i\n    p = v * (1.0 - s)\n    q = v * (1.0 - s * f)\n    t = v * (1.0 - s * (1.0 - f))\n    i %= 6\n\n    if i == 0:\n        return v, t, p\n    if i == 1:\n        return q, v, p\n    if i == 2:\n        return p, v, t\n    if i == 3:\n        return p, q, v\n    if i == 4:\n        return t, p, v\n    return v, p, q",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstructed source reproduces the exact algorithms and public interface of the original colorsys module."
+          }
+        },
+        {
+          "name": "<module>.rgb_to_yiq",
+          "tier": "workhorse",
+          "source": "def rgb_to_yiq(r, g, b):\n    \"\"\"Convert the color from RGB coordinates to YIQ coordinates.\"\"\"\n    y = 0.299 * r + 0.587 * g + 0.114 * b\n    i = 0.596 * r - 0.274 * g - 0.322 * b\n    q = 0.211 * r - 0.523 * g + 0.312 * b\n    return y, i, q",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstructed function implements the standard RGB→YIQ linear transform exactly as the original artifact."
+          }
+        },
+        {
+          "name": "<module>.yiq_to_rgb",
+          "tier": "workhorse",
+          "source": "def yiq_to_rgb(y, i, q):\n    \"\"\"\n    Convert a color from YIQ to RGB.\n\n    Parameters\n    ----------\n    y, i, q : float\n        YIQ components (typically in the range 0‑1, but the function does not enforce limits).\n\n    Returns\n    -------\n    tuple of float\n        (r, g, b) RGB components corresponding to the given YIQ values.\n    \"\"\"\n    r = y + 0.956 * i + 0.621 * q\n    g = y - 0.272 * i - 0.647 * q\n    b = y - 1.106 * i + 1.703 * q\n    return r, g, b",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the implementation matches the standard YIQ→RGB formula and passes a thorough differential test suite."
+          }
+        },
+        {
+          "name": "<module>.rgb_to_hls",
+          "tier": "workhorse",
+          "source": "def rgb_to_hls(r, g, b):\n    \"\"\"\n    Convert the color from RGB coordinates to HLS coordinates.\n\n    Parameters\n    ----------\n    r, g, b : float\n        Red, green, and blue components of the color, each in the range [0.0, 1.0].\n\n    Returns\n    -------\n    h, l, s : float\n        Hue, lightness, and saturation components, each in the range [0.0, 1.0].\n    \"\"\"\n    maxc = max(r, g, b)\n    minc = min(r, g, b)\n\n    # Lightness is the average of the max and min channel values.\n    l = (maxc + minc) / 2.0\n\n    # If the color is a shade of gray (no chroma), hue and saturation are zero.\n    if maxc == minc:\n        return 0.0, l, 0.0\n\n    # Saturation depends on lightness.\n    if l <= 0.5:\n        s = (maxc - minc) / (maxc + minc)\n    else:\n        s = (maxc - minc) / (2.0 - maxc - minc)\n\n    # Compute the intermediate values used to find hue.\n    rc = (maxc - r) / (maxc - minc)\n    gc = (maxc - g) / (maxc - minc)\n    bc = (maxc - b) / (maxc - minc)\n\n    # Determine hue based on which channel is the maximum.\n    if r == maxc:\n        h = bc - gc\n    elif g == maxc:\n        h = 2.0 + rc - bc\n    else:  # b == maxc\n        h = 4.0 + gc - rc\n\n    # Normalize hue to the range [0, 1).\n    h = (h / 6.0) % 1.0\n\n    return h, l, s",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the source matches the CPython colorsys.rgbtohls algorithm exactly."
+          }
+        },
+        {
+          "name": "<module>.hls_to_rgb",
+          "tier": "workhorse",
+          "source": "def hls_to_rgb(h, l, s):\n    \"\"\"\n    Convert hue, lightness, and saturation to red, green, blue.\n\n    Parameters\n    ----------\n    h : float\n        Hue component, in the range [0.0, 1.0].\n    l : float\n        Lightness component, in the range [0.0, 1.0].\n    s : float\n        Saturation component, in the range [0.0, 1.0].\n\n    Returns\n    -------\n    tuple[float, float, float]\n        (r, g, b) each in the range [0.0, 1.0].\n    \"\"\"\n    # If saturation is zero the color is a shade of gray.\n    if s == 0.0:\n        return l, l, l\n\n    # Compute the temporary values m1 and m2 used for the conversion.\n    if l <= 0.5:\n        m2 = l * (1.0 + s)\n    else:\n        m2 = l + s - l * s\n    m1 = 2.0 * l - m2\n\n    # Convert hue to the three RGB components.\n    r = _v(m1, m2, h + ONE_THIRD)\n    g = _v(m1, m2, h)\n    b = _v(m1, m2, h - ONE_THIRD)\n\n    return r, g, b",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the implementation follows the standard HLS→RGB algorithm and matches colorsys.hlstorgb on a comprehensive set of edge‑case and typical inputs."
+          }
+        },
+        {
+          "name": "<module>._v",
+          "tier": "workhorse",
+          "source": "def _v(m1, m2, hue):\n    \"\"\"\n    Helper used by ``hsv_to_rgb`` to compute the value of one RGB component.\n\n    Parameters\n    ----------\n    m1, m2 : float\n        Intermediate values derived from the saturation and value components.\n    hue : float\n        Hue value in the range [0.0, 1.0).  Values outside this range are wrapped\n        around using modulo 1.0.\n\n    Returns\n    -------\n    float\n        The computed component value, also in the range [0.0, 1.0].\n    \"\"\"\n    # Ensure hue is within the canonical 0‑1 interval.\n    hue = hue % 1.0\n\n    if hue < ONE_SIXTH:\n        # First sixth of the hue circle.\n        return m1 + (m2 - m1) * hue * 6.0\n    if hue < 0.5:\n        # Middle half of the hue circle.\n        return m2\n    if hue < TWO_THIRD:\n        # Last third of the hue circle (but before the final sixth).\n        return m1 + (m2 - m1) * (TWO_THIRD - hue) * 6.0\n    # Final sixth of the hue circle.\n    return m1",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the standard HSL‑to‑RGB helper logic and passes all logical edge cases."
+          }
+        },
+        {
+          "name": "<module>.rgb_to_hsv",
+          "tier": "workhorse",
+          "source": "def rgb_to_hsv(r, g, b):\n    \"\"\"Convert the color from RGB coordinates to HSV coordinates.\n\n    Parameters\n    ----------\n    r, g, b : float\n        Red, green, and blue components in the range [0.0, 1.0].\n\n    Returns\n    -------\n    tuple (h, s, v)\n        Hue, saturation, and value components, each in the range [0.0, 1.0].\n    \"\"\"\n    maxc = max(r, g, b)\n    minc = min(r, g, b)\n    v = maxc\n    if minc == maxc:\n        return 0.0, 0.0, v\n\n    s = (maxc - minc) / maxc\n    rc = (maxc - r) / (maxc - minc)\n    gc = (maxc - g) / (maxc - minc)\n    bc = (maxc - b) / (maxc - minc)\n\n    if r == maxc:\n        h = bc - gc\n    elif g == maxc:\n        h = 2.0 + rc - bc\n    else:\n        h = 4.0 + gc - rc\n\n    h = (h / 6.0) % 1.0\n    return h, s, v",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the implementation matches the canonical algorithm for all exercised edge‑cases and random inputs."
+          }
+        },
+        {
+          "name": "<module>.hsv_to_rgb",
+          "tier": "workhorse",
+          "source": "def hsv_to_rgb(h, s, v):\n    \"\"\"\n    Convert a color from HSV (Hue, Saturation, Value) to RGB.\n\n    Parameters\n    ----------\n    h : float\n        Hue component, in the range [0.0, 1.0].\n    s : float\n        Saturation component, in the range [0.0, 1.0].\n    v : float\n        Value (brightness) component, in the range [0.0, 1.0].\n\n    Returns\n    -------\n    tuple[float, float, float]\n        The corresponding RGB components, each in the range [0.0, 1.0].\n\n    The algorithm follows the standard HSV→RGB conversion used by the\n    ``colorsys`` module in CPython.\n    \"\"\"\n    # When saturation is zero the color is a shade of gray.\n    if s == 0.0:\n        return v, v, v\n\n    # Scale hue to the [0, 6) interval and split into integer and fractional parts.\n    h6 = h * 6.0\n    i = int(h6)            # integer part, determines the sextant\n    f = h6 - i             # fractional part within the sextant\n\n    # Compute intermediate values.\n    p = v * (1.0 - s)\n    q = v * (1.0 - s * f)\n    t = v * (1.0 - s * (1.0 - f))\n\n    # Wrap the sextant index to the range [0, 5].\n    i %= 6\n\n    # Select the appropriate RGB tuple based on the sextant.\n    if i == 0:\n        return v, t, p\n    if i == 1:\n        return q, v, p\n    if i == 2:\n        return p, v, t\n    if i == 3:\n        return p, q, v\n    if i == 4:\n        return t, p, v\n    # i == 5\n    return v, p, q",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the supplied source matches the canonical HSV→RGB algorithm used by colorsys."
+          }
+        }
+      ]
+    }
+  ]
+}
