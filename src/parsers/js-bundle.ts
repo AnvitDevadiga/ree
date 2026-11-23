@@ -106,8 +106,69 @@ function buildRegistryModel(ast: AnyNode, src: string, registry: ModuleEntry[]) 
   const spans = registry.map((m) => [m.node.start, m.node.end] as const);
   const entryKeys = findBootstrapEntryKeys(ast, spans).filter((k) => ids.has(`mod:${k}`));
   const entryPoints: EntryPoint[] = entryKeys.map((k) => ({ unitId: `mod:${k}`, reason: "declared", detail: `bootstrap require(${k})` }));
+
+  // 1. Split large module factories into function-level child units, so decoys
+  //    planted inside a module wrapper are judged one by one. The module stays
+  //    as the parent (keeps its require edges, links every child).
+  const children: CodeUnit[] = [];
+  for (const mod of registry) {
+    const fnBody = mod.node.body as AnyNode | undefined;
+    if (!fnBody || fnBody.type !== "BlockStatement" || fnBody.end - fnBody.start < MODULE_SPLIT_CHARS) continue;
+    const inner = src.slice(fnBody.start + 1, fnBody.end - 1);
+    let sub: ArtifactModel;
+    try {
+      sub = parseJsSource(inner, `module[${mod.key}]`, inner.length);
+    } catch {
+      continue;
+    }
+    if (sub.units.length < 3 || sub.units.some((u) => u.id === "chunk:0")) continue;
+    const parent = units.find((u) => u.id === `mod:${mod.key}`)!;
+    const local = new Set(sub.units.map((c) => c.id));
+    const idOf = (cid: string) => `${parent.id}/${cid}`;
+    for (const c of sub.units) {
+      children.push({
+        ...c,
+        id: idOf(c.id),
+        name: `${parent.name}#${c.name}`,
+        offset: (c.offset ?? 0) + fnBody.start + 1,
+        references: c.references.filter((r) => local.has(r)).map(idOf),
+        meta: { ...c.meta, parent: parent.id },
+      });
+    }
+    parent.references = [...new Set([...parent.references, ...sub.units.map((c) => idOf(c.id))])];
+    parent.meta = { ...parent.meta, splitInto: sub.units.length };
+    parent.body = undefined;
+  }
+  units.push(...children);
+
+  // 2. Code outside the registry (webpack runtime, bootstrap, anything injected
+  //    around it) used to be dropped unexamined. Model it too: replace each
+  //    factory with a placeholder and model the remainder.
+  let rest = "";
+  let cursor = 0;
+  for (const m of [...registry].sort((a, b) => a.node.start - b.node.start)) {
+    rest += src.slice(cursor, m.node.start) + "0";
+    cursor = m.node.end;
+  }
+  rest += src.slice(cursor);
+  if (rest.replace(/\s+/g, "").length > 20) {
+    try {
+      const outer = parseJsSource(rest, "<runtime>", rest.length);
+      const local = new Set(outer.units.map((u) => u.id));
+      const rid = (id: string) => `rt/${id}`;
+      for (const u of outer.units) {
+        units.push({ ...u, id: rid(u.id), name: `<runtime>#${u.name}`, references: u.references.filter((r) => local.has(r)).map(rid), meta: { ...u.meta, runtime: true, parent: "<runtime>" } });
+      }
+      for (const e of outer.entryPoints) entryPoints.push({ ...e, unitId: rid(e.unitId), detail: `runtime: ${e.detail ?? ""}` });
+    } catch {
+      /* unparsable remainder: keep the registry model */
+    }
+  }
   return { units, entryPoints };
 }
+
+/** Module factories smaller than this stay one unit. */
+const MODULE_SPLIT_CHARS = 1500;
 
 /**
  * Find the module registry. Candidates are object literals whose keys look like

@@ -31,8 +31,8 @@
       "variant": "clean",
       "format": "js-bundle",
       "naiveTokens": 365,
-      "reeTokens": 264,
-      "reductionPct": 27.7,
+      "reeTokens": 365,
+      "reductionPct": 0,
       "realRecall": "4/4",
       "decoyRemoval": "n/a",
       "exhaustContained": "n/a",
@@ -70,8 +70,8 @@
       "variant": "hardened",
       "format": "js-bundle",
       "naiveTokens": 994,
-      "reeTokens": 289,
-      "reductionPct": 70.9,
+      "reeTokens": 416,
+      "reductionPct": 58.1,
       "realRecall": "4/4",
       "decoyRemoval": "6/6",
       "exhaustContained": "n/a",
@@ -107,6 +107,6 @@
   ],
   "notes": [
     "**pyc (structure only):** 8 code objects recovered from `tool.pyc` (Python 3.14+); 6 with parameter names. Pruning is disabled for pyc because REE does not yet recover a bytecode call graph.",
-    "**native (structure only):** `/bin/ls` parsed as macho: 1 function symbols, 90 imports, 289 strings. No call graph, so nothing is pruned."
+    "**native (structure only):** `/bin/ls` parsed as macho: 54 function symbols, 90 imports, 289 strings. No call graph, so nothing is pruned."
   ]
 }
