@@ -53,7 +53,10 @@ command on macOS, Linux and Windows.
   are split at statement level, so real code is kept (Electron 90% → 80.1%, Node CLI
   65.8% → 41.7% reduction, with the real entry points now preserved).
 - esbuild/rollup/UMD bundles were one opaque slice; wrappers are now unwrapped and
-  same-file units packed into reconstruction-sized slices.
+  same-file units packed into reconstruction-sized slices. Measured with
+  gpt-oss-120b on Groq: full recall and behavior on the minified fixture
+  (per-function slicing alone had dropped it to 0/2 names, 1/2 behavior), at
+  less than half the cost.
 - Verifier verdicts written in Markdown were ignored; reconstructions could ship with
   a stray code fence.
 - `.NET` generic types (``Foo`2``) now map to their decompiled file.

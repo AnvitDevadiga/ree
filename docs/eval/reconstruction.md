@@ -3,7 +3,7 @@
 > **Model used: `openai/gpt-oss-120b` on Groq** (via REE's OpenAI-compatible
 > provider), not a Claude model. Results from a different model will differ.
 
-Generated with `npm run bench:reconstruct` on 2026-11-22 and 2026-11-23. Raw data
+Generated with `npm run bench:reconstruct` on 2026-11-22, 2026-11-23 and 2026-11-24. Raw data
 for every run is in `benchmarks/reconstruct/results.*.json`.
 
 ## Method
@@ -53,10 +53,27 @@ Spend cap: $2.00. Groq free tier: 8,000 tokens/minute, 200,000 tokens/day.
 The second "after" run hit Groq's daily token quota on its first call and is reported
 as **n/a (rate-limited)**, not as a quality result ($0.0026).
 
-### With slice packing (the fix) — **pending**
+### With slice packing (the fix) — 2 complete runs, 2026-11-24
 
-Two runs with packing are still to be measured; they were blocked by Groq's daily
-quota. This table will be filled in when they run.
+| Fixture | Slices → calls | Function recall | Behavior | Verifier accepted (final) | Spend |
+|---|---:|---:|---:|---:|---:|
+| `ms` | 8 → 1 | 4/4 · 4/4 | **3/3 · 3/3** | 1/1 · 1/1 | $0.0029 · $0.0057 |
+| `escape-html` + `dlv` (minified) | 5 → 1 | **2/2 · 2/2** | **2/2 · 2/2** | 1/1 · 1/1 | $0.0058 · $0.0026 |
+| `kleur` (`.asar`) | 6 → 2 | 3/3 · 3/3 | not probed | 2/2 · 2/2 | $0.0079 · $0.0063 |
+| **Total** | | | | | **$0.0165 · $0.0146** |
+
+No rate-limit failures in either run. `colorsys` was skipped in both: the `.pyc`
+path does not use packing, and it would have spent about 40K of the 200K daily
+token quota.
+
+Packing fixed the regression from per-function slicing. On the minified bundle,
+name recall went from 0/2 back to 2/2 and behavior from 1/2 back to 2/2. Spend
+dropped from $0.0418 to about $0.016 per run for the same three fixtures.
+
+In both runs the verifier **rejected** some first drafts (`ms`, `kleur`, and
+`escape-html` in r1), and REE retried those on the deep tier. Every final
+reconstruction passed its probes. The benchmark scores only the final output, so
+it does not show whether those rejections were justified.
 
 ¹ Inflated: REE's structural `.pyc` summary already gives the model every function
 name, so name recall on `.pyc` measures nothing about the model.
@@ -70,16 +87,19 @@ name, so name recall on `.pyc` measures nothing about the model.
    came back with `escapeHtml` broken — the model swapped the CommonJS factory's
    `(module, exports)` parameters, so the export never landed. Single runs are not
    reliable; this is why two runs per side were planned.
-3. **The verifier is not a quality signal.** It accepted every reconstruction,
-   including the broken `escapeHtml` and one with a `TODO` in place of a missing
-   variable. Only the behavioral probes caught those.
+3. **The verifier is not a reliable quality signal.** In the earlier runs it
+   accepted every reconstruction, including the broken `escapeHtml` and one with a
+   `TODO` in place of a missing variable; only the behavioral probes caught those.
+   In the packed runs it did reject some first drafts, but whether those
+   rejections were justified is not measured.
 4. **Per-function slicing hurt reconstruction on small bundles.** The minified
    `escapeHtml` slice could not see the module-level regex it uses (the model wrote
    `// TODO: Provide the definition of w`), name recovery dropped to 0/2, and it cost
    3–4× the tokens. Fine-grained slicing still matters for *cleaning* (it stopped real
    code being quarantined alongside decoys on real BLA output), so the fix keeps
    cleaning per-unit and **packs same-file units back together** (up to ~4,000
-   tokens) before reconstruction. That fix is not yet measured.
+   tokens) before reconstruction. In two runs, packing restored full recall and
+   behavior at less than half the cost of per-function slicing.
 
 ## Bugs the benchmark found in REE (all fixed)
 
@@ -109,8 +129,10 @@ benchmark, not REE.
 | before-r2 | $0.0299 |
 | after-r1 | $0.0418 |
 | after-r2 (rate-limited) | $0.0026 |
+| packed-r1 | $0.0165 |
+| packed-r2 | $0.0146 |
 | debugging calls (verifier probe, single fixture, aborted runs) | ≈ $0.02 |
-| **Total** | **≈ $0.18 of the $2.00 cap** |
+| **Total** | **≈ $0.21 of the $2.00 cap** |
 
 ## Limits of this benchmark
 

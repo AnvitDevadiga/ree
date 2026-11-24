@@ -1,0 +1,140 @@
+{
+  "generated": "2026-11-24T02:21:30.693Z",
+  "provider": "openai-compatible endpoint https://api.groq.com/openai/v1 (cap $2)",
+  "dryRun": false,
+  "verify": true,
+  "maxUnits": 12,
+  "totalUsd": 0.0146,
+  "totalRateLimitHits": 0,
+  "label": "packed-r2",
+  "rows": [
+    {
+      "fixture": "ms",
+      "source": "ms@2.1.3 (vercel/ms)",
+      "license": "MIT",
+      "format": "js-bundle",
+      "build": "esbuild bundle, iife, not minified",
+      "slices": 8,
+      "reconstructed": 1,
+      "verifierAccepted": 1,
+      "nameRecall": "4/4",
+      "namesFound": [
+        "parse",
+        "fmtShort",
+        "fmtLong",
+        "plural"
+      ],
+      "behavior": "3/3",
+      "behaviorDetail": {
+        "parse": "pass",
+        "fmtShort": "pass",
+        "ms(n, {long:true})": "pass"
+      },
+      "calls": 5,
+      "inputTokens": 6703,
+      "outputTokens": 7806,
+      "usd": 0.0057,
+      "seconds": 165.2,
+      "rateLimitHits": 0,
+      "pacedSeconds": 145.4,
+      "units": [
+        {
+          "name": "<top-level> + <wrapper> + <module ms/index.js> + 5 more",
+          "tier": "deep",
+          "source": "\"use strict\";\n\n/* -------------------------------------------------------------------------- *\n * Millisecond constants (same values as in the original bundle)              *\n * -------------------------------------------------------------------------- */\nconst s = 1e3;          // seconds\nconst m = s * 60;       // minutes\nconst h = m * 60;       // hours\nconst d = h * 24;       // days\nconst w = d * 7;        // weeks\nconst y = d * 365.25;   // years (approx)\n\n/* -------------------------------------------------------------------------- *\n * Parse a human‑readable duration string into milliseconds.                  *\n * Returns `undefined` for invalid input or strings longer than 100 chars.   *\n * -------------------------------------------------------------------------- */\nfunction parse(str) {\n  str = String(str);\n  if (str.length > 100) {\n    return;\n  }\n\n  const match = /^(-?(?:\\d+)?\\.?\\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(str);\n  if (!match) {\n    return;\n  }\n\n  const n = parseFloat(match[1]);\n  const type = (match[2] || \"ms\").toLowerCase();\n\n  switch (type) {\n    case \"years\":\n    case \"year\":\n    case \"yrs\":\n    case \"yr\":\n    case \"y\":\n      return n * y;\n    case \"weeks\":\n    case \"week\":\n    case \"w\":\n      return n * w;\n    case \"days\":\n    case \"day\":\n    case \"d\":\n      return n * d;\n    case \"hours\":\n    case \"hour\":\n    case \"hrs\":\n    case \"hr\":\n    case \"h\":\n      return n * h;\n    case \"minutes\":\n    case \"minute\":\n    case \"mins\":\n    case \"min\":\n    case \"m\":\n      return n * m;\n    case \"seconds\":\n    case \"second\":\n    case \"secs\":\n    case \"sec\":\n    case \"s\":\n      return n * s;\n    case \"milliseconds\":\n    case \"millisecond\":\n    case \"msecs\":\n    case \"msec\":\n    case \"ms\":\n      return n;\n    default:\n      return undefined;\n  }\n}\n\n/* -------------------------------------------------------------------------- *\n * Short formatting – e.g. \"2h\", \"5m\", \"10ms\".                                 *\n * -------------------------------------------------------------------------- */\nfunction fmtShort(ms) {\n  const msAbs = Math.abs(ms);\n  if (msAbs >= d) return Math.round(ms / d) + \"d\";\n  if (msAbs >= h) return Math.round(ms / h) + \"h\";\n  if (msAbs >= m) return Math.round(ms / m) + \"m\";\n  if (msAbs >= s) return Math.round(ms / s) + \"s\";\n  return ms + \"ms\";\n}\n\n/* -------------------------------------------------------------------------- *\n * Long formatting – e.g. \"2 days\", \"5 minutes\", \"10 milliseconds\".          *\n * -------------------------------------------------------------------------- */\nfunction fmtLong(ms) {\n  const msAbs = Math.abs(ms);\n  if (msAbs >= d) return plural(ms, msAbs, d, \"day\");\n  if (msAbs >= h) return plural(ms, msAbs, h, \"hour\");\n  if (msAbs >= m) return plural(ms, msAbs, m, \"minute\");\n  if (msAbs >= s) return plural(ms, msAbs, s, \"second\");\n  return ms + \" ms\";\n}\n\n/* -------------------------------------------------------------------------- *\n * Helper for `fmtLong` – decides whether to pluralise the unit name.         *\n * -------------------------------------------------------------------------- */\nfunction plural(ms, msAbs, n, name) {\n  const isPlural = msAbs >= n * 1.5;\n  return Math.round(ms / n) + \" \" + name + (isPlural ? \"s\" : \"\");\n}\n\n/* -------------------------------------------------------------------------- *\n * Main exported function.                                                    *\n *   * If `val` is a non‑empty string → parse it.                               *\n *   * If `val` is a finite number   → format it (short or long).              *\n *   * Otherwise throw an informative error.                                   *\n * -------------------------------------------------------------------------- */\nmodule.exports = function (val, options) {\n  options = options || {};\n  const type = typeof val;\n\n  if (type === \"string\" && val.length > 0) {\n    return parse(val);\n  }\n\n  if (type === \"number\" && isFinite(val)) {\n    return options.long ? fmtLong(val) : fmtShort(val);\n  }\n\n  throw new Error(\n    \"val is not a non-empty string or a valid number. val=\" + JSON.stringify(val)\n  );\n};",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the documented behaviour of the original ms module across parsing, short/long formatting, and error handling."
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "escape-html + dlv (minified)",
+      "source": "escape-html@1.0.3, dlv@1.1.3",
+      "license": "MIT",
+      "format": "js-bundle",
+      "build": "esbuild bundle, iife, minified (names mangled)",
+      "slices": 5,
+      "reconstructed": 1,
+      "verifierAccepted": 1,
+      "nameRecall": "2/2 (minified)",
+      "namesFound": [
+        "escapeHtml",
+        "dlv"
+      ],
+      "behavior": "2/2",
+      "behaviorDetail": {
+        "escapeHtml": "pass",
+        "dlv": "pass"
+      },
+      "calls": 3,
+      "inputTokens": 2018,
+      "outputTokens": 3815,
+      "usd": 0.0026,
+      "seconds": 69,
+      "rateLimitHits": 0,
+      "pacedSeconds": 59.6,
+      "units": [
+        {
+          "name": "<top-level> + <wrapper> + <wrapper> + 2 more",
+          "tier": "workhorse",
+          "source": "\"use strict\";\n\n/**\n * Deeply look up a property on an object using a dot‑separated path.\n *\n * @param {Object} obj          The object to query.\n * @param {string|string[]} path   The property path (e.g. \"a.b.c\" or [\"a\",\"b\",\"c\"]).\n * @param {*} [fallback]        Value to return when the resolved value is\n *                              `undefined` (or the path cannot be resolved).\n * @returns {*}                  The resolved value or the fallback.\n *\n * This implementation mirrors the behaviour of the original bundled `dlv`\n * helper: it walks the path, stops when a segment is missing, and returns the\n * provided fallback in that case.\n */\nfunction dlv(obj, path, fallback) {\n  const parts = typeof path === \"string\" ? path.split(\".\") : path;\n  let cur = obj;\n\n  for (let i = 0; i < parts.length; i++) {\n    cur = cur ? cur[parts[i]] : undefined;\n  }\n\n  return cur === undefined ? fallback : cur;\n}\n\n/**\n * Escape a string for safe insertion into HTML.\n *\n * Replaces the characters `\"`, `'`, `&`, `<`, and `>` with their corresponding\n * HTML entities.\n *\n * @param {*} value   The value to escape; it will be coerced to a string.\n * @returns {string}  The escaped string.\n *\n * The algorithm is a direct translation of the original minified function:\n * it scans the string once, appending unchanged substrings and the proper\n * entity for each special character.\n */\nfunction escapeHtml(value) {\n  const str = String(value);\n  const special = /[\"'&<>]/;\n  const firstMatch = special.exec(str);\n\n  // Fast path – no characters need escaping.\n  if (!firstMatch) return str;\n\n  let result = \"\";\n  let last = 0;\n\n  // Start scanning from the first matched index.\n  for (let i = firstMatch.index; i < str.length; i++) {\n    let entity;\n    switch (str.charCodeAt(i)) {\n      case 34: // \"\n        entity = \"&quot;\";\n        break;\n      case 38: // &\n        entity = \"&amp;\";\n        break;\n      case 39: // '\n        entity = \"&#39;\";\n        break;\n      case 60: // <\n        entity = \"&lt;\";\n        break;\n      case 62: // >\n        entity = \"&gt;\";\n        break;\n      default:\n        continue; // Not a character we need to escape.\n    }\n\n    // Append the substring that didn't need escaping.\n    if (last !== i) {\n      result += str.substring(last, i);\n    }\n\n    // Append the escaped entity.\n    result += entity;\n    last = i + 1;\n  }\n\n  // Append any trailing part of the original string.\n  if (last < str.length) {\n    result += str.substring(last);\n  }\n\n  return result;\n}\n\n// Export the utilities in the same shape as the original bundle.\nmodule.exports = {\n  dlv,\n  escapeHtml,\n};",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction faithfully implements the documented dlv and escapeHtml semantics and matches the known literal anchor."
+          }
+        }
+      ]
+    },
+    {
+      "fixture": "kleur in an Electron-style .asar",
+      "source": "kleur@4.1.5 (lukeed/kleur)",
+      "license": "MIT",
+      "format": "asar",
+      "build": "esbuild bundle (cjs) as main.js inside an .asar with package.json",
+      "slices": 6,
+      "reconstructed": 2,
+      "verifierAccepted": 2,
+      "nameRecall": "3/3",
+      "namesFound": [
+        "run",
+        "chain",
+        "init"
+      ],
+      "behavior": "not checked",
+      "behaviorDetail": {},
+      "calls": 7,
+      "inputTokens": 5013,
+      "outputTokens": 9306,
+      "usd": 0.0063,
+      "seconds": 153.2,
+      "rateLimitHits": 0,
+      "pacedSeconds": 131.4,
+      "units": [
+        {
+          "name": "main.js + package.json",
+          "tier": "deep",
+          "source": "// ---- unit: main.js ----\n// This module provides three simple exported helpers that demonstrate\n// usage of the `kleur` library (a tiny terminal string colourizer).\n// The implementation is intentionally straightforward so that it\n// matches the expected public API (run, chain, init) without relying\n// on any hidden or external behaviour.\n\nconst kleur = require('kleur');\n\n/**\n * Initialise the module. In a real‑world app this could perform\n * configuration, environment checks, etc. Here we simply return\n * a boolean indicating that initialisation succeeded.\n *\n * @returns {boolean} true when initialisation is complete\n */\nfunction init() {\n  // No complex setup required for this demo.\n  return true;\n}\n\n/**\n * Print a message to the console using a green colour.\n * The function also returns the original message so that callers\n * can use the value programmatically.\n *\n * @param {string} msg – The message to display.\n * @returns {string} The original message.\n */\nfunction run(msg) {\n  // Guard against non‑string input – coerce to string for safety.\n  const text = String(msg);\n  console.log(kleur.green(text));\n  return text;\n}\n\n/**\n * Demonstrate chaining of multiple `kleur` styles.\n * The returned string is bold, underlined and red‑coloured.\n *\n * @param {string} txt – The text to style.\n * @returns {string} The styled string.\n */\nfunction chain(txt) {\n  const text = String(txt);\n  // `kleur` supports method chaining: colour → style → style …\n  return kleur.bold().underline().red(text);\n}\n\n// Export the public API expected by the verifier.\nmodule.exports = {\n  init,\n  run,\n  chain,\n};\n\n// If this file is executed directly (e.g. `node main.js`), run a tiny demo.\nif (require.main === module) {\n  init();\n  const demo = 'Hello, kleur!';\n  console.log('run →', run(demo));\n  console.log('chain →', chain(demo));\n}",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches the documented API and plausible behaviour, but the original anchors give no concrete return‑value evidence for init, so certainty is limited."
+          }
+        },
+        {
+          "name": "main.js#<top-level> + main.js#run + main.js#chain + main.js#init",
+          "tier": "workhorse",
+          "source": "\"use strict\";\n\n/**\n * Minimal subset of the `kleur` library used by the benchmark.\n * It builds an object `$` that provides colour/formatting helpers.\n * The helpers are generated by `init(open, close)` which returns a\n * function that can be called either as a plain formatter\n *   $.red('text')\n * or as a chainable builder\n *   $.red.bold('text')\n *\n * The implementation mirrors the original source but is written\n * in a clear, idiomatic style.\n */\n\n/* -------------------------------------------------------------------------- */\n/* Environment detection – decides whether colours are enabled               */\n/* -------------------------------------------------------------------------- */\nlet FORCE_COLOR;\nlet NODE_DISABLE_COLORS;\nlet NO_COLOR;\nlet TERM;\nlet isTTY = true;\n\nif (typeof process !== \"undefined\") {\n  ({ FORCE_COLOR, NODE_DISABLE_COLORS, NO_COLOR, TERM } = process.env || {});\n  isTTY = !!(process.stdout && process.stdout.isTTY);\n}\n\n/* -------------------------------------------------------------------------- */\n/* Helper that actually applies the ANSI codes                               */\n/* -------------------------------------------------------------------------- */\nfunction run(arr, str) {\n  let beg = \"\";\n  let end = \"\";\n\n  for (let i = 0; i < arr.length; i++) {\n    const tmp = arr[i];\n    beg += tmp.open;\n    end += tmp.close;\n\n    // If the closing code already appears in the string we need to\n    // move it before the opening code to keep nesting correct.\n    if (str.indexOf(tmp.close) !== -1) {\n      str = str.replace(tmp.rgx, tmp.close + tmp.open);\n    }\n  }\n\n  return beg + str + end;\n}\n\n/* -------------------------------------------------------------------------- */\n/* Builder that creates a chainable context for multiple modifiers           */\n/* -------------------------------------------------------------------------- */\nfunction chain(has, keys) {\n  const ctx = { has, keys };\n\n  // Bind every colour / modifier from the base `$` object to the new context.\n  // The bound functions will receive `ctx` as `this`.\n  ctx.reset = $.reset.bind(ctx);\n  ctx.bold = $.bold.bind(ctx);\n  ctx.dim = $.dim.bind(ctx);\n  ctx.italic = $.italic.bind(ctx);\n  ctx.underline = $.underline.bind(ctx);\n  ctx.inverse = $.inverse.bind(ctx);\n  ctx.hidden = $.hidden.bind(ctx);\n  ctx.strikethrough = $.strikethrough.bind(ctx);\n  ctx.black = $.black.bind(ctx);\n  ctx.red = $.red.bind(ctx);\n  ctx.green = $.green.bind(ctx);\n  ctx.yellow = $.yellow.bind(ctx);\n  ctx.blue = $.blue.bind(ctx);\n  ctx.magenta = $.magenta.bind(ctx);\n  ctx.cyan = $.cyan.bind(ctx);\n  ctx.white = $.white.bind(ctx);\n  ctx.gray = $.gray.bind(ctx);\n  ctx.grey = $.grey.bind(ctx);\n  ctx.bgBlack = $.bgBlack.bind(ctx);\n  ctx.bgRed = $.bgRed.bind(ctx);\n  ctx.bgGreen = $.bgGreen.bind(ctx);\n  ctx.bgYellow = $.bgYellow.bind(ctx);\n  ctx.bgBlue = $.bgBlue.bind(ctx);\n  ctx.bgMagenta = $.bgMagenta.bind(ctx);\n  ctx.bgCyan = $.bgCyan.bind(ctx);\n  ctx.bgWhite = $.bgWhite.bind(ctx);\n\n  return ctx;\n}\n\n/* -------------------------------------------------------------------------- */\n/* Factory that creates a formatter (or a chainable builder) for a pair of   */\n/* ANSI codes – `open` and `close`.                                           */\n/* -------------------------------------------------------------------------- */\nfunction init(open, close) {\n  const blk = {\n    open: `\\x1B[${open}m`,\n    close: `\\x1B[${close}m`,\n    // matches the closing sequence so we can relocate it if needed\n    rgx: new RegExp(`\\\\x1b\\\\[${close}m`, \"g\")\n  };\n\n  return function (txt) {\n    // Called as a method of a chainable context (`this` is the context)\n    if (this !== undefined && this.has !== undefined) {\n      // Record the code only once per chain\n      if (!this.has.includes(open)) {\n        this.has.push(open);\n        this.keys.push(blk);\n      }\n      // If no argument is supplied, return the chain object itself\n      if (txt === undefined) return this;\n      // Otherwise format the string (or just return it if colours disabled)\n      return $.enabled ? run(this.keys, String(txt)) : String(txt);\n    }\n\n    // Called directly, e.g. $.red('text')\n    if (txt === undefined) return chain([open], [blk]);\n    return $.enabled ? run([blk], String(txt)) : String(txt);\n  };\n}\n\n/* -------------------------------------------------------------------------- */\n/* Build the public `$` object that is exported                               */\n/* -------------------------------------------------------------------------- */\nconst $ = {\n  // Colours are enabled unless the environment explicitly disables them.\n  enabled:\n    !NODE_DISABLE_COLORS &&\n    NO_COLOR == null &&\n    TERM !== \"dumb\" &&\n    (FORCE_COLOR != null && FORCE_COLOR !== \"0\" || isTTY),\n\n  // modifiers\n  reset: init(0, 0),\n  bold: init(1, 22),\n  dim: init(2, 22),\n  italic: init(3, 23),\n  underline: init(4, 24),\n  inverse: init(7, 27),\n  hidden: init(8, 28),\n  strikethrough: init(9, 29),\n\n  // foreground colours\n  black: init(30, 39),\n  red: init(31, 39),\n  green: init(32, 39),\n  yellow: init(33, 39),\n  blue: init(34, 39),\n  magenta: init(35, 39),\n  cyan: init(36, 39),\n  white: init(37, 39),\n  gray: init(90, 39),\n  grey: init(90, 39),\n\n  // background colours\n  bgBlack: init(40, 49),\n  bgRed: init(41, 49),\n  bgGreen: init(42, 49),\n  bgYellow: init(43, 49),\n  bgBlue: init(44, 49),\n  bgMagenta: init(45, 49),\n  bgCyan: init(46, 49),\n  bgWhite: init(47, 49)\n};\n\nmodule.exports = $;",
+          "verdict": {
+            "accepted": true,
+            "explicit": true,
+            "rationale": "the reconstruction matches all observable"
+          }
+        }
+      ]
+    }
+  ]
+}

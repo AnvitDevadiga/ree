@@ -160,19 +160,21 @@ Every number here is reproducible with the command shown, and the gates run in C
 ### Reconstruction quality
 
 Four small open-source projects, rebuilt with REE's full pipeline and compared with the real source
-(**`openai/gpt-oss-120b` on Groq**, not a Claude model; [full write-up](docs/eval/reconstruction.md)):
+(**`openai/gpt-oss-120b` on Groq**, not a Claude model; [full write-up](docs/eval/reconstruction.md)).
+Two complete runs each with the current pipeline:
 
 | Fixture | Function recall | Behavioral probes passed | Cost per run |
 |---|---:|---:|---:|
-| `ms` (bundled) | 4/4 · 4/4 | **3/3 · 3/3** | ≈ $0.005 |
-| `escape-html` + `dlv` (minified) | 2/2 · 2/2 | **2/2 · 2/2** | ≈ $0.003 |
-| `kleur` (in an `.asar`) | 3/3 · 3/3 | not probed | ≈ $0.004 |
-| `colorsys` (`.pyc`) | 7/7 · 7/7 ¹ | not probed | ≈ $0.018 |
+| `ms` (bundled) | 4/4 · 4/4 | **3/3 · 3/3** | $0.003–0.006 |
+| `escape-html` + `dlv` (minified) | 2/2 · 2/2 | **2/2 · 2/2** | $0.003–0.006 |
+| `kleur` (in an `.asar`) | 3/3 · 3/3 | not probed | $0.006–0.008 |
+| `colorsys` (`.pyc`) ¹ | 7/7 · 7/7 | not probed | ≈ $0.017 |
 
-Two complete runs each. **Honest caveats:** results vary between runs (an earlier run returned a broken
-`escapeHtml`); the verifier agent accepted everything, including broken code, so only the behavioral
-probes count; fixtures are small; runs with REE's latest slice-packing fix are still pending.
-<sub>¹ The `.pyc` summary already contains every name, so this measures nothing about the model.</sub>
+**Honest caveats:** results vary between runs (an earlier run returned a broken `escapeHtml` that
+the verifier accepted, so only the behavioral probes count). The fixtures are small, and only one
+model has been measured.
+<sub>¹ Measured in the earlier runs; `.pyc` does not use slice packing. Its summary already contains
+every function name, so recall here measures nothing about the model.</sub>
 
 ### Against real anti-AI hardening
 
