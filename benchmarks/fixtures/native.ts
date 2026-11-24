@@ -50,7 +50,8 @@ export function buildNativeFixture(): string | null {
   const cc = which("cc") ?? which("clang") ?? which("gcc");
   if (!cc) return null;
   mkdirSync(NATIVE_CACHE, { recursive: true });
-  const out = join(NATIVE_CACHE, "inventory-native");
+  // Windows compilers append .exe to the output name.
+  const out = join(NATIVE_CACHE, process.platform === "win32" ? "inventory-native.exe" : "inventory-native");
   if (existsSync(out)) return out;
   const src = join(NATIVE_CACHE, "inventory.c");
   writeFileSync(src, SOURCE);

@@ -76,6 +76,14 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      # jadx (Apache-2.0) is optional for users; CI installs it so the R8→APK gate is
+      # actually exercised. Without it that row is reported as skipped, not failed.
+      - name: Install jadx 1.5.6
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/jadx.zip" https://github.com/skylot/jadx/releases/download/v1.5.6/jadx-1.5.6.zip
+          unzip -q "$RUNNER_TEMP/jadx.zip" -d "$RUNNER_TEMP/jadx"
+          chmod +x "$RUNNER_TEMP/jadx/bin/jadx"
+          echo "$RUNNER_TEMP/jadx/bin" >> "$GITHUB_PATH"
       - run: npm ci
       - run: npm run bench:obfuscation
       - uses: actions/upload-artifact@v4

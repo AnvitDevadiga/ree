@@ -1,6 +1,6 @@
 # Real-world protection benchmark (JavaScript)
 
-Generated 2026-11-24T06:20:49.385Z by `npm run bench:obfuscation`. Deterministic pass only; no model calls.
+Generated 2026-11-24T07:29:23.309Z by `npm run bench:obfuscation`. Deterministic pass only; no model calls.
 
 | Source | Protection | Size | Parsed | Units | Literals visible | Decoder flagged | Leaks | Tokens (raw → REE) | Gate |
 |---|---|---:|:-:|---:|---:|:-:|---:|---|:-:|

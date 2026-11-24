@@ -162,9 +162,10 @@ test("setup: CLAUDE_CONFIG_DIR moves Claude Code's state file and skills folder"
 });
 
 test("setup: launch command — this installation, npx when run from npx's cache, built CLI in dev", () => {
-  assert.deepEqual(launchCommand({ npx: true }).args, ["-y", "ree-reverse-engineer-everything", "mcp"]);
+  // Windows registers `cmd /c npx …`, elsewhere an absolute npx: both are npx entries.
+  assert.ok(isNpxEntry(launchCommand({ npx: true })));
   assert.ok(isNpxEntry(launchCommand({ scriptPath: "/home/u/.npm/_npx/abc/node_modules/ree/dist/cli/index.js" })));
-  const script = resolve("dist/cli/index.js");
+  const { script } = fakeInstall();
   const l = launchCommand({ scriptPath: script, execPath: "/usr/bin/node" });
   assert.deepEqual(l, { command: "/usr/bin/node", args: [script, "mcp"] });
   assert.equal(stableNode(process.execPath, null), process.execPath);
@@ -254,9 +255,22 @@ test("review: npx is registered absolutely (GUI apps lack PATH) and via cmd on W
 });
 
 test("review: running from source registers the built CLI, never a missing src/cli/index.js", () => {
-  const l = launchCommand({ scriptPath: resolve("src/cli/index.js"), execPath: "/usr/bin/node" });
-  assert.deepEqual(l.args, [resolve("dist/cli/index.js"), "mcp"]);
+  // Self-contained layout: tests must not depend on `npm run build` having run.
+  const { root, script } = fakeInstall();
+  const l = launchCommand({ scriptPath: join(root, "src", "cli", "index.js"), execPath: "/usr/bin/node" });
+  assert.deepEqual(l.args, [script, "mcp"]);
+  // No build at all: fall back to npx rather than register a missing file.
+  const bare = mkdtempSync(join(tmpdir(), "ree-nobuild-"));
+  assert.ok(isNpxEntry(launchCommand({ scriptPath: join(bare, "src", "cli", "index.js"), execPath: "/usr/bin/node" })));
 });
+
+function fakeInstall(): { root: string; script: string } {
+  const root = mkdtempSync(join(tmpdir(), "ree-install-"));
+  mkdirSync(join(root, "dist", "cli"), { recursive: true });
+  const script = join(root, "dist", "cli", "index.js");
+  writeFileSync(script, "// built CLI");
+  return { root, script };
+}
 
 test("review: a failed Claude Code re-register restores the previous entry, keeping its env", () => {
   const { h, env } = home();

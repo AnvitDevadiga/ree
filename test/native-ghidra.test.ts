@@ -80,7 +80,7 @@ test("ghidra: a failed Ghidra run falls back to structure with a warning", { ski
     const m = r.report.model;
     assert.equal((m.meta as { decompiler: string }).decompiler, "none");
     assert.ok(m.warnings.some((w) => /Ghidra failed/.test(w)));
-    assert.ok(m.units.some((u) => u.name === "_main"), "structural symbols kept");
+    assert.ok(m.units.some((u) => /^_?main$/.test(u.name)), "structural symbols kept (Mach-O prefixes '_', ELF/PE don't)");
     assert.ok(r.limitations.some((l) => /Ghidra was found but failed/.test(l)));
   });
 });
@@ -88,7 +88,7 @@ test("ghidra: a failed Ghidra run falls back to structure with a warning", { ski
 test("ghidra (absent): structure only, with the install command", { skip: !BIN && "needs a C compiler" }, async () => {
   await withEnv({ REE_DISABLE_GHIDRA: "1" }, async () => {
     const r = await analyze(BIN!);
-    assert.ok(r.report.model.units.some((u) => u.name === "_checksum"));
+    assert.ok(r.report.model.units.some((u) => /^_?checksum$/.test(u.name)));
     assert.ok(r.limitations.some((l) => /Install Ghidra/.test(l)));
   });
 });

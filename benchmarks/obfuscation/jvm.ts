@@ -89,7 +89,10 @@ export async function runJvmBench(): Promise<{ rows: Row[]; skipped?: string }> 
     const leaks = redactInjections(text).count + (text.includes("ignore previous instructions") ? 1 : 0);
     const entry = m.entryPoints.some((e) => /Main/.test(e.detail ?? "") || m.units.find((u) => u.id === e.unitId)?.name.endsWith(".Main"));
     const reasons: string[] = [];
-    if (!m.units.length) reasons.push("nothing modeled");
+    // External tools are optional: without jadx an APK's code isn't modeled, which is
+    // documented behavior, not a regression. Report the row as skipped.
+    const toolMissing = protection === "r8-dex (apk)" && decompiler === "none" ? "jadx not installed (optional)" : undefined;
+    if (!m.units.length && !toolMissing) reasons.push("nothing modeled");
     if (leaks) reasons.push(`${leaks} leak(s)`);
     if (visible < TRUTH_LITERALS.length && decompiler !== "none") reasons.push(`literals ${visible}/${TRUTH_LITERALS.length}`);
     if (protection !== "r8-dex (apk)" && !entry) reasons.push("kept entry point not found");
@@ -105,8 +108,8 @@ export async function runJvmBench(): Promise<{ rows: Row[]; skipped?: string }> 
       leaks,
       naiveTokens: 0,
       reeTokens: r.slices.reduce((n, s) => n + s.estTokens, 0),
-      gate: reasons.length ? "fail" : "pass",
-      gateReason: reasons.join("; ") || undefined,
+      gate: reasons.length ? "fail" : toolMissing && !m.units.length ? "skip" : "pass",
+      gateReason: reasons.join("; ") || (toolMissing && !m.units.length ? toolMissing : undefined),
     });
   }
   return { rows };

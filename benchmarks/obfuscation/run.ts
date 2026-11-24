@@ -119,7 +119,7 @@ export interface Row {
   leaks: number;
   naiveTokens: number;
   reeTokens: number;
-  gate: "pass" | "fail";
+  gate: "pass" | "fail" | "skip";
   gateReason?: string;
 }
 
@@ -173,7 +173,7 @@ function toMarkdown(rows: Row[]): string {
   const sep = "|---|---|---:|:-:|---:|---:|:-:|---:|---|:-:|";
   const lines = rows.map(
     (r) =>
-      `| ${r.source} | ${r.protection} | ${r.bytes} | ${r.parsed ? "✅" : "❌"} | ${r.units} | ${r.literals} | ${r.decoder ? "yes" : "—"} | ${r.leaks} | ${r.naiveTokens} → ${r.reeTokens} | ${r.gate === "pass" ? "✅" : `❌ ${r.gateReason}`} |`,
+      `| ${r.source} | ${r.protection} | ${r.bytes} | ${r.parsed ? "✅" : "❌"} | ${r.units} | ${r.literals} | ${r.decoder ? "yes" : "—"} | ${r.leaks} | ${r.naiveTokens} → ${r.reeTokens} | ${r.gate === "pass" ? "✅" : r.gate === "skip" ? `⏭ ${r.gateReason}` : `❌ ${r.gateReason}`} |`,
   );
   return [
     "# Real-world protection benchmark (JavaScript)",
