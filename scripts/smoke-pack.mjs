@@ -12,7 +12,7 @@
  * Exits non-zero on any failure.
  */
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -54,7 +54,12 @@ try {
   if (!out.stats || out.stats.unitsIn < 2 || !Array.isArray(out.limitations)) fail("'ree analyze --json' returned an unexpected report");
   const doctor = JSON.parse(run("npx", ["--no-install", "ree", "doctor", "--json"], { cwd: app }));
   if (doctor.ree !== info.version || !doctor.node?.ok) fail("'ree doctor --json' unexpected");
-  console.log(`[smoke:pack] installed: --version ${version}, analyze (${out.stats.unitsIn} units), doctor: ok`);
+  const appSample = join(app, "node_modules", info.name, "samples", "hardened-app.asar");
+  const exp = JSON.parse(run("npx", ["--no-install", "ree", "export", appSample, "-o", join(app, "parts"), "--json"], { cwd: app }));
+  if (exp.partsWritten !== 10 || !existsSync(join(exp.dir, "README.md"))) fail("'ree export' did not write the expected workspace");
+  const plain = run("npx", ["--no-install", "ree", sample], { cwd: app, env: { ...process.env, CI: "true" } });
+  if (!/REE analysis/.test(plain)) fail("'ree <file>' outside a terminal did not print the analysis");
+  console.log(`[smoke:pack] installed: --version ${version}, analyze (${out.stats.unitsIn} units), export (${exp.partsWritten} parts), ree <file>, doctor: ok`);
   console.log("[smoke:pack] PASS");
 } finally {
   rmSync(app, { recursive: true, force: true });

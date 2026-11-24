@@ -24,8 +24,9 @@
 ## ⚡ Try it in 30 seconds
 
 ```bash
-npx ree-reverse-engineer-everything demo                     # bundled samples, no setup
-npx ree-reverse-engineer-everything analyze ./your-file      # any supported format, detected from content
+npx ree-reverse-engineer-everything                  # opens REE: pick an app, see its parts
+npx ree-reverse-engineer-everything MyApp.dmg        # straight to that app's parts
+npx ree-reverse-engineer-everything demo             # bundled samples, no setup
 ```
 
 Needs Node 22+. Nothing else: optional decompilers add more depth when installed (`ree doctor` shows what you have).
@@ -131,6 +132,45 @@ function escapeHtml(string) {
 The model recovered the real name (`escapeHtml`, minified to `A`) and the function passed every
 behavioral probe. That is one good run, not a guarantee — see the [reconstruction benchmark](#reconstruction-quality)
 for failures too. (Formatting of the middle and right columns is condensed here to fit.)
+
+## 🧊 Open an app like a fridge
+
+Type `ree` and a terminal app opens. No paths to remember:
+
+```text
+REE · Open an app to see its parts
+› sig
+❯ Signal.app          macOS app · Applications
+  signal-desktop.apk  Android app · Downloads · 98 MB
+```
+
+Pick one and REE takes it apart: every part grouped by what it does, with where the app starts and how the parts connect.
+
+```text
+REE · Parts of hardened-app.asar
+asar · 10 parts · 3 decoy/filler removed · 1 planted AI instruction(s) removed
+
+❯ ▶ Start here 4            ▶ main.js        uses 4 · used by 1
+  ▣ Screens & UI 3          ▶ preload.js     uses 0 · used by 1
+  ◆ Core logic 1            ▶ index.html     uses 1 · used by 1
+  ⚙ System & processes 1    ▶ renderer.js    uses 0 · used by 1
+  ≡ Config & data 3
+  ▧ Libraries 2
+
+  Removed by REE 3
+  What REE couldn't tell 3
+```
+
+- **Enter** a part to read its cleaned code, **c** to follow its connections, **x** to have your AI model
+  explain it in plain language (optional; it works fully offline without one).
+- **e** exports a parts workspace: a `README.md` map of the app with a diagram, one note per part
+  with its code and connections, and `parts.json` for tools. It's for studying how something is built
+  and designing your own version. REE never rebuilds or repackages the original.
+- Anything REE set aside (decoys, filler, planted instructions) is listed under **Removed by REE**, and
+  everything it couldn't determine is under **What REE couldn't tell**.
+
+Works in any terminal on macOS, Linux and Windows. `ree export <file>` does the export without the
+interactive app, for scripts.
 
 ## 📦 Supported formats
 
@@ -289,6 +329,9 @@ graphs). It never presents a guess as a fact.
 
 | Command | What it does |
 |---|---|
+| `ree` | Open the interactive app: pick an app from a list (this folder, Downloads, Desktop, Applications) or paste a path |
+| `ree <file>` | Open that file's parts in the interactive app (prints the analysis report when not in a terminal) |
+| `ree export <file>` | Write a parts workspace (`-o <dir>`; never overwrites) |
 | `ree demo` | Analyze the bundled samples — a result in seconds |
 | `ree analyze <file>` | Any supported format or app bundle, detected from content. Stats, entry points, findings, limitations. `--json` for scripts |
 | `ree analyze <file> --reconstruct` | Rebuild readable source with a model (`--dry-run` shows exactly what would be sent, free) |

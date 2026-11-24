@@ -3,6 +3,31 @@
 All notable changes to REE are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **`ree` opens an interactive terminal app.** Pick an app from a list of what's on
+  the machine (this folder, Downloads, Desktop, Applications) or paste a path, then
+  browse an exploded view of its parts: grouped by what they do (start here, screens,
+  core logic, network, files, system, config, libraries), with the evidence for each
+  grouping, how parts connect, decoys REE removed and what it couldn't determine.
+  Open a part to read its cleaned code, follow connections, or ask the configured
+  model to explain it. Built on Ink (MIT); works on macOS, Linux and Windows.
+- `ree <file>` opens that file in the app (prints the report outside a terminal).
+- `ree export <file>` / **e** in the app: a parts workspace with a README map and
+  diagram, one Markdown note per part and `parts.json`. Never overwrites a folder.
+- Mistyped commands get a suggestion (`ree analyse` → "Did you mean 'ree analyze'?").
+
+### Security
+
+- Everything the app displays comes from the artifact or a model, so control
+  characters, terminal escape sequences and bidi overrides are neutralized before
+  display; a hostile function name cannot clear the screen, move the cursor or
+  retitle the terminal. Export file names are reduced to a safe character set,
+  avoid Windows-reserved names and are verified to stay inside the export folder;
+  code fences cannot be closed early by the code they contain.
+
 ## [2.0.0] — 2026-11-23
 
 REE now understands most of what ships: Android, Java, .NET, native, Python and iOS

@@ -24,26 +24,8 @@ import { reeReconstructAll, reeTraceEntrypoint } from "../mcp/tools.js";
 import { startStdioServer } from "../mcp/server.js";
 import { bold, cyan, dim, green, pct, red, severityColor, table, yellow } from "./format.js";
 
-const program = new Command();
-
-program
-  .name("ree")
-  .description("REE — Reverse Engineer Everything. Budget-safe, decoy-resistant reverse engineering for authorized analysis.")
-  .version((createRequire(import.meta.url)("../../package.json") as { version: string }).version);
-
-program
-  .command("analyze")
-  .argument("<target>", "any supported artifact — format is detected from content (.asar, JS, .wasm, .pyc, ELF/Mach-O/PE, .dmg, .app or a directory)")
-  .option("--json", "emit machine-readable JSON")
-  .option("--findings <n>", "max findings to print", "25")
-  .option("--no-prune", "disable reachability pruning")
-  .option("--budget <tokens>", "token budget for context slices", "60000")
-  .option("--reconstruct", "run the multi-agent reconstruction pipeline (calls the LLM)")
-  .option("--dry-run", "with --reconstruct: do not call the model")
-  .option("--max-units <n>", "with --reconstruct: max units to reconstruct", "10")
-  .option("--no-verify", "with --reconstruct: skip the verification agent")
-  .option("-o, --out <file>", "with --reconstruct: write results JSON to a file")
-  .action(async (target: string, opts) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function runAnalyze(target: string, opts: any): Promise<void> {
     let detected: Detection;
     try {
       detected = await detectFormat(target);
@@ -170,7 +152,28 @@ program
         }
       }
     }
-  });
+}
+
+const program = new Command();
+
+program
+  .name("ree")
+  .description("REE — Reverse Engineer Everything. Budget-safe, decoy-resistant reverse engineering for authorized analysis.")
+  .version((createRequire(import.meta.url)("../../package.json") as { version: string }).version);
+
+program
+  .command("analyze")
+  .argument("<target>", "any supported artifact — format is detected from content (.asar, JS, .wasm, .pyc, ELF/Mach-O/PE, .dmg, .app or a directory)")
+  .option("--json", "emit machine-readable JSON")
+  .option("--findings <n>", "max findings to print", "25")
+  .option("--no-prune", "disable reachability pruning")
+  .option("--budget <tokens>", "token budget for context slices", "60000")
+  .option("--reconstruct", "run the multi-agent reconstruction pipeline (calls the LLM)")
+  .option("--dry-run", "with --reconstruct: do not call the model")
+  .option("--max-units <n>", "with --reconstruct: max units to reconstruct", "10")
+  .option("--no-verify", "with --reconstruct: skip the verification agent")
+  .option("-o, --out <file>", "with --reconstruct: write results JSON to a file")
+  .action(runAnalyze);
 
 program
   .command("sanitize")
@@ -339,6 +342,82 @@ async function runApp(target: string, opts: { budget?: string; maxArtifacts?: st
     }
     console.log(dim(`\nRun 'ree analyze <inner-path>' for a full report on any one artifact.`));
   }
+
+const ANALYZE_DEFAULTS = { findings: "25", prune: true, budget: "60000", maxUnits: "10", verify: true };
+
+program
+  .command("explore")
+  .alias("open")
+  .argument("[target]", "a file, .app, .dmg or folder; omit to pick one from a list")
+  .description("interactive terminal app: pick an app, see its parts, look inside, export")
+  .action(async (target?: string) => {
+    const { canRunInteractive, runTui } = await import("../tui/run.js");
+    if (!canRunInteractive()) {
+      console.error("ree explore needs an interactive terminal. In scripts, use 'ree analyze <file> --json' or 'ree export <file>'.");
+      process.exitCode = 2;
+      return;
+    }
+    await runTui(target);
+  });
+
+program
+  .command("export")
+  .argument("<target>", "a file, .app, .dmg or folder")
+  .option("-o, --out <dir>", "folder to write (default: ./<name>-parts; never overwrites)")
+  .option("--json", "print the result as JSON")
+  .description("write a parts workspace: a README map of the app plus one note per part")
+  .action(async (target: string, opts: { out?: string; json?: boolean }) => {
+    const { openTarget, OpenError } = await import("../tui/load.js");
+    const { exportWorkspace, defaultExportDir } = await import("../tui/export.js");
+    try {
+      const map = await openTarget(target);
+      const r = exportWorkspace(map, opts.out ?? defaultExportDir(map));
+      if (opts.json) console.log(JSON.stringify(r, null, 2));
+      else {
+        console.log(`${green("✓")} ${r.partsWritten} parts exported (${r.files} files) → ${r.dir}`);
+        if (r.partsSkipped) console.log(yellow(`  ${r.partsSkipped} parts beyond the export limit were left out`));
+        console.log(dim(`  Start with ${join(r.dir, "README.md")}`));
+      }
+    } catch (e) {
+      console.error(`ree: ${(e as Error).message}`);
+      process.exitCode = e instanceof OpenError ? 2 : 1;
+    }
+  });
+
+// `ree` alone opens the interactive app; `ree <file>` opens that file in it
+// (or prints the analysis report when not attached to a terminal).
+// A root action disables commander's implicit `help` subcommand; keep it.
+program.helpCommand(true);
+program.argument("[target]").action(async (target?: string) => {
+  const { canRunInteractive, runTui } = await import("../tui/run.js");
+  if (target === undefined) {
+    if (canRunInteractive()) return runTui();
+    program.help({ error: true });
+    return;
+  }
+  if (!existsSync(target)) {
+    const names = program.commands.flatMap((c) => [c.name(), ...c.aliases()]);
+    const near = names.map((n) => ({ n, d: editDistance(n, target.toLowerCase()) })).sort((a, b) => a.d - b.d)[0];
+    console.error(
+      near && near.d <= 2
+        ? `ree: unknown command '${target}'. Did you mean 'ree ${near.n}'?`
+        : `ree: '${target}' is not a file, folder or command. Run 'ree --help' for commands, or 'ree' to pick a file.`,
+    );
+    process.exitCode = 2;
+    return;
+  }
+  if (canRunInteractive()) return runTui(target);
+  return runAnalyze(target, ANALYZE_DEFAULTS);
+});
+
+function editDistance(a: string, b: string): number {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array<number>(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) dp[0]![j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i]![j] = Math.min(dp[i - 1]![j]! + 1, dp[i]![j - 1]! + 1, dp[i - 1]![j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return dp[a.length]![b.length]!;
+}
 
 program.parseAsync(process.argv).catch((e) => {
   console.error(`ree: ${(e as Error).message}`);

@@ -5,6 +5,15 @@ optional external program that REE detects on `PATH` at runtime and invokes as
 a separate process. Install them yourself (`ree doctor` prints the command).
 Licenses were checked for compatibility with MIT before integration.
 
+## Runtime npm dependencies (installed by npm, not vendored)
+
+| Package | License | Used for |
+|---|---|---|
+| ink 8.0.0 | MIT | the interactive terminal app (`ree`) |
+| react 19.3.1 | MIT | component model for Ink |
+| commander, acorn, acorn-walk, zod | MIT | CLI parsing, JavaScript parsing, schemas |
+| @anthropic-ai/sdk, @modelcontextprotocol/sdk | MIT | optional model provider, MCP server |
+
 ## Bundled sample (redistributed in the npm package)
 
 | File | Contents | License |
