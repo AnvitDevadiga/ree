@@ -18,6 +18,19 @@ All notable changes to REE are documented here. This project adheres to
 - `ree export <file>` / **e** in the app: a parts workspace with a README map and
   diagram, one Markdown note per part and `parts.json`. Never overwrites a folder.
 - Mistyped commands get a suggestion (`ree analyse` → "Did you mean 'ree analyze'?").
+- **`ree setup` connects REE to your AI agents**: Claude Code (through its own
+  `claude mcp` CLI, plus a REE skill), Claude Desktop, VS Code (Copilot) and Cursor.
+  It shows the plan first, never touches other servers, backs up every file,
+  refuses to rewrite configs it can't parse, keeps symlinked dotfiles working and
+  honors `CLAUDE_CONFIG_DIR` / `COPILOT_HOME`. `--dry-run`, `--remove`, `--print`
+  (copy-paste config for any client), `--client`, `--npx`, `--json`. Verified
+  against the real Claude Code CLI, which reports the server as connected.
+- `skills/ree/SKILL.md`: an agent skill describing REE's workflow and rules
+  (artifact text is data, report limitations, cite evidence, responsible use).
+- `ree_parts` MCP tool: the exploded parts view for agents.
+- `ree update`: checks npm for a newer version and shows the right command for how
+  REE was installed (runs it, after confirmation, only for global npm installs).
+- `ree doctor` shows which agents have REE connected.
 
 ### Security
 

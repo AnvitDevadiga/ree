@@ -14,7 +14,7 @@ import { pathToFileURL } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { reeInspect, reeReconstructModule, reeStripDecoys, reeTraceEntrypoint } from "./tools.js";
+import { PART_GROUPS, reeInspect, reeParts, reeReconstructModule, reeStripDecoys, reeTraceEntrypoint, type PartsArgs } from "./tools.js";
 
 export const SERVER_INFO = { name: "ree", version: "0.1.0" } as const;
 
@@ -33,7 +33,7 @@ export function createServer(): McpServer {
     "ree_inspect",
     {
       description:
-        "Deterministically parse an artifact (.asar, JS bundle, .wasm, .pyc, ELF/Mach-O/PE) and return its structure: format, units, entry points, and sample strings. No LLM call; output is bounded.",
+        "Deterministically parse an artifact (Electron .asar, JS bundle, .wasm, Android APK/AAB, JAR/.class, .NET, ELF/Mach-O/PE, .pyc, iOS .ipa) and return its structure: format, units, entry points, and sample strings. No LLM call; output is bounded.",
       inputSchema: {
         path: z.string().describe("Absolute path to the artifact"),
         maxUnits: z.number().int().min(1).max(500).optional().describe("Max units to list (default 50)"),
@@ -42,6 +42,27 @@ export function createServer(): McpServer {
     async (args) => {
       try {
         return asText(await reeInspect(args));
+      } catch (e) {
+        return asError(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    "ree_parts",
+    {
+      description:
+        "Exploded view of an app: its parts grouped by what they do (groups: entry, ui, logic, network, storage, system, data = config & data, library), with the evidence for each grouping and how parts connect. Pass `part` to get one part's cleaned code and connections. Built on the cleaned model (decoys removed, planted instructions redacted). No LLM call.",
+      inputSchema: {
+        path: z.string().describe("Absolute path to the artifact"),
+        group: z.enum(PART_GROUPS as [string, ...string[]]).optional().describe("Only list this group"),
+        part: z.string().optional().describe("Part key or name from a previous listing: returns its cleaned code"),
+        maxParts: z.number().int().min(1).max(300).optional().describe("Max parts to list (default 40)"),
+      },
+    },
+    async (args) => {
+      try {
+        return asText(await reeParts(args as PartsArgs));
       } catch (e) {
         return asError(e);
       }

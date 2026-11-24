@@ -9,11 +9,11 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-22d3ee?style=flat-square)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A5%2022-339933?style=flat-square&logo=nodedotjs&logoColor=white)](package.json)
 [![Platforms](https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-tested-0ea5e9?style=flat-square)](.github/workflows/ci.yml)
-[![MCP](https://img.shields.io/badge/MCP-4%20tools-e879f9?style=flat-square)](#-mcp-server)
+[![MCP](https://img.shields.io/badge/MCP-5%20tools-e879f9?style=flat-square)](#-connect-your-ai-agent)
 [![Injection leaks](https://img.shields.io/badge/injection%20leaks-0-22c55e?style=flat-square)](#-results)
 [![Stars](https://img.shields.io/github/stars/AnvitDevadiga/ree?style=flat-square&color=f59e0b&logo=github)](https://github.com/AnvitDevadiga/ree/stargazers)
 
-**[Try it](#-try-it-in-30-seconds)** · **[Demo](#-demo)** · **[Formats](#-supported-formats)** · **[Results](#-results)** · **[How it works](#-how-it-works)** · **[CLI](#-cli)** · **[MCP](#-mcp-server)** · **[Limitations](#-limitations)** · **[Responsible use](#-responsible-use)**
+**[Try it](#-try-it-in-30-seconds)** · **[Demo](#-demo)** · **[Formats](#-supported-formats)** · **[Results](#-results)** · **[How it works](#-how-it-works)** · **[CLI](#-cli)** · **[Agents](#-connect-your-ai-agent)** · **[Limitations](#-limitations)** · **[Responsible use](#-responsible-use)**
 
 </div>
 
@@ -274,7 +274,7 @@ flowchart TB
     A --> D
 
     SL --> CLI["⌨️ CLI<br/>analyze · demo · doctor · app · trace"]:::out
-    SL --> MCP["🔌 MCP server<br/>4 tools for AI agents"]:::out
+    SL --> MCP["🔌 MCP server<br/>5 tools for AI agents"]:::out
     SL --> AG["🤖 Reconstruction<br/>opt-in · the only model calls"]:::llm
 
     classDef input fill:#f43f5e,stroke:#be123c,color:#ffffff,stroke-width:2px
@@ -332,6 +332,8 @@ graphs). It never presents a guess as a fact.
 | `ree` | Open the interactive app: pick an app from a list (this folder, Downloads, Desktop, Applications) or paste a path |
 | `ree <file>` | Open that file's parts in the interactive app (prints the analysis report when not in a terminal) |
 | `ree export <file>` | Write a parts workspace (`-o <dir>`; never overwrites) |
+| `ree setup` | Connect REE to your AI agents (`--dry-run`, `--remove`, `--print`, `--client`) |
+| `ree update` | Check npm for a newer REE and show (or, for global installs, run) the update |
 | `ree demo` | Analyze the bundled samples — a result in seconds |
 | `ree analyze <file>` | Any supported format or app bundle, detected from content. Stats, entry points, findings, limitations. `--json` for scripts |
 | `ree analyze <file> --reconstruct` | Rebuild readable source with a model (`--dry-run` shows exactly what would be sent, free) |
@@ -355,17 +357,43 @@ deterministic and says so.
 Paid calls are priced at their worst case **before** they are sent and refused if they could cross the
 cap. Rate limits are paced from the provider's headers.
 
-## 🔌 MCP server
+## 🔌 Connect your AI agent
 
-REE gives AI agents (Claude Desktop, Cursor, VS Code and others) four tools to work on an artifact without
-pulling raw, hostile bytes into their context. All artifact-derived text is wrapped as untrusted data.
+```bash
+ree setup
+```
+
+REE finds the AI agents on your machine, shows exactly what it will change, and connects them after
+you say yes. Then ask your agent things like *"Use REE to show me the parts of ~/Downloads/app.apk
+and explain how it talks to the network."*
+
+| Agent | What `ree setup` does |
+|---|---|
+| **Claude Code** | Registers REE through Claude Code's own `claude mcp` command, and installs a REE skill that teaches Claude the workflow |
+| **Claude Desktop** | Adds REE to `claude_desktop_config.json` |
+| **VS Code (Copilot)** | Adds REE to `~/.copilot/mcp-config.json` |
+| **Cursor** | Adds REE to `~/.cursor/mcp.json` (format not re-verified against Cursor's current docs) |
+| **Anything else** | `ree setup --print` prints copy-paste configuration |
+
+It never touches other servers, backs up every file before changing it, refuses to rewrite a config
+it can't parse (for example one with comments), and keeps symlinked dotfiles working.
+`ree setup --dry-run` shows the plan without changing anything, `ree setup --remove` undoes it, and
+`ree doctor` shows which agents are connected.
+
+### MCP tools
+
+REE gives agents five tools to work on an artifact without pulling raw, hostile bytes into their
+context. All artifact-derived text is wrapped as untrusted data.
 
 | Tool | Calls a model? | Purpose |
 |---|:---:|---|
+| `ree_parts` | no | The exploded view: parts grouped by what they do, with evidence and connections; one part's cleaned code on request |
 | `ree_inspect` | no | Format, units, entry points, warnings, sample strings |
 | `ree_strip_decoys` | no | Run the cleaning engine; findings, token reduction, limitations |
 | `ree_trace_entrypoint` | no | Bounded call graph from an entry point |
 | `ree_reconstruct_module` | yes | Reconstruct one cleaned unit (`dryRun` supported) |
+
+Manual configuration for any MCP client:
 
 ```json
 { "mcpServers": { "ree": { "command": "npx", "args": ["-y", "ree-reverse-engineer-everything", "mcp"] } } }

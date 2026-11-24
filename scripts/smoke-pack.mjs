@@ -14,7 +14,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const win = process.platform === "win32";
@@ -31,7 +31,7 @@ const tarball = join(packDir, info.filename);
 const files = info.files.map((f) => f.path);
 console.log(`[smoke:pack] ${info.filename}: ${files.length} files, ${(info.size / 1024).toFixed(0)} KB packed`);
 
-for (const need of ["dist/cli/index.js", "dist/index.js", "samples/hardened-app.asar", "samples/escape-dlv.min.js", "LICENSE", "THIRD_PARTY_NOTICES.md", "README.md"]) {
+for (const need of ["dist/cli/index.js", "dist/index.js", "skills/ree/SKILL.md", "samples/hardened-app.asar", "samples/escape-dlv.min.js", "LICENSE", "THIRD_PARTY_NOTICES.md", "README.md"]) {
   if (!files.includes(need)) fail(`tarball is missing ${need}`);
 }
 const leaked = files.filter((f) => /^(test|benchmarks|src|scripts)\//.test(f) || /\.ts$/.test(f) && !/\.d\.ts$/.test(f) || /\.env/.test(f));
@@ -59,7 +59,14 @@ try {
   if (exp.partsWritten !== 10 || !existsSync(join(exp.dir, "README.md"))) fail("'ree export' did not write the expected workspace");
   const plain = run("npx", ["--no-install", "ree", sample], { cwd: app, env: { ...process.env, CI: "true" } });
   if (!/REE analysis/.test(plain)) fail("'ree <file>' outside a terminal did not print the analysis");
-  console.log(`[smoke:pack] installed: --version ${version}, analyze (${out.stats.unitsIn} units), export (${exp.partsWritten} parts), ree <file>, doctor: ok`);
+  // Setup from the installed package, against an empty home: plans, never writes without --yes.
+  const fakeHome = join(app, "home");
+  const homeEnv = { ...process.env, HOME: fakeHome, USERPROFILE: fakeHome, APPDATA: join(fakeHome, "AppData"), XDG_CONFIG_HOME: join(fakeHome, ".config"), COPILOT_HOME: join(fakeHome, ".copilot"), CLAUDE_CONFIG_DIR: join(fakeHome, ".claude"), PATH: dirname(process.execPath), CI: "true" };
+  const setup = JSON.parse(run(process.execPath, [join(app, "node_modules", info.name, "dist", "cli", "index.js"), "setup", "--client", "cursor", "--json"], { cwd: app, env: homeEnv }));
+  if (setup.plan?.[0]?.action !== "add" || !setup.launch?.args?.[0]?.includes(info.name)) fail("'ree setup --json' returned an unexpected plan");
+  run(process.execPath, [join(app, "node_modules", info.name, "dist", "cli", "index.js"), "setup", "--client", "cursor", "--yes"], { cwd: app, env: homeEnv });
+  if (!existsSync(join(fakeHome, ".cursor", "mcp.json"))) fail("'ree setup --yes' did not write the Cursor config");
+  console.log(`[smoke:pack] installed: --version ${version}, analyze (${out.stats.unitsIn} units), export (${exp.partsWritten} parts), ree <file>, setup, doctor: ok`);
   console.log("[smoke:pack] PASS");
 } finally {
   rmSync(app, { recursive: true, force: true });

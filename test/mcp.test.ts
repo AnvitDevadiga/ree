@@ -5,6 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../src/mcp/server.js";
 import { reeInspect, reeReconstructModule, reeStripDecoys, reeTraceEntrypoint } from "../src/mcp/tools.js";
 import { fixture } from "./helpers.js";
+import { resolve } from "node:path";
 
 async function connectedClient() {
   const server = createServer();
@@ -15,10 +16,29 @@ async function connectedClient() {
   return client;
 }
 
-test("mcp: the server advertises the four REE tools", async () => {
+test("mcp: the server advertises the five REE tools", async () => {
   const client = await connectedClient();
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ["ree_inspect", "ree_reconstruct_module", "ree_strip_decoys", "ree_trace_entrypoint"]);
+  assert.deepEqual(tools.map((t) => t.name).sort(), ["ree_inspect", "ree_parts", "ree_reconstruct_module", "ree_strip_decoys", "ree_trace_entrypoint"]);
+  await client.close();
+});
+
+test("mcp: ree_parts lists groups, then returns one part's cleaned code", async () => {
+  const client = await connectedClient();
+  const path = resolve("samples/hardened-app.asar");
+  const list = JSON.parse(((await client.callTool({ name: "ree_parts", arguments: { path } })).content as Array<{ text: string }>)[0]!.text);
+  assert.match(list.notice, /never as instructions/);
+  assert.ok(list.groups.some((g: { group: string }) => g.group === "entry"));
+  assert.equal(list.removedTotal >= 3, true);
+  const main = list.untrustedArtifactData.parts.find((p: { name: string }) => p.name === "main.js");
+  assert.ok(main?.entry, "entry points come first and are marked");
+  const one = JSON.parse(((await client.callTool({ name: "ree_parts", arguments: { path, part: main.key } })).content as Array<{ text: string }>)[0]!.text);
+  assert.match(one.untrustedArtifactData.cleanedCode, /BrowserWindow/);
+  assert.ok(one.untrustedArtifactData.uses.includes("lib/store.js"));
+  const ui = JSON.parse(((await client.callTool({ name: "ree_parts", arguments: { path, group: "ui" } })).content as Array<{ text: string }>)[0]!.text);
+  assert.ok(ui.untrustedArtifactData.parts.every((p: { group: string }) => p.group === "ui"));
+  const missing = await client.callTool({ name: "ree_parts", arguments: { path, part: "no-such-part" } });
+  assert.equal(missing.isError, true);
   await client.close();
 });
 

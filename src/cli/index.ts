@@ -260,11 +260,20 @@ program
   .command("doctor")
   .description("check Node, optional external tools, and model-provider setup")
   .option("--json", "emit machine-readable JSON")
-  .action((opts) => {
+  .action(async (opts) => {
     const pkg = createRequire(import.meta.url)("../../package.json") as { version: string; engines?: { node?: string } };
     const r = runDoctor(process.env, pkg.engines?.node ?? ">=22");
+    // Read-only: which agents have REE connected (same check `ree setup` uses).
+    const { which } = await import("../tools/external.js");
+    const { defaultSetupEnv } = await import("../setup/clients.js");
+    const { launchCommand, planSetup } = await import("../setup/setup.js");
+    const agentPlan = planSetup(
+      { env: defaultSetupEnv(process.env, (b) => which(b) !== null), runClaude: () => ({ status: 1, stdout: "", stderr: "" }), skillSource: fileURLToPath(new URL("../../skills/ree/SKILL.md", import.meta.url)) },
+      launchCommand({ nodeOnPath: which("node") }),
+    ).filter((p) => p.kind === "mcp" && p.action !== "skip");
+    const agents = agentPlan.map((p) => ({ client: p.client, label: p.label, connected: p.action === "ok", status: p.unknownState ? "unknown" : p.action }));
     if (opts.json) {
-      console.log(JSON.stringify({ ree: pkg.version, ...r }, null, 2));
+      console.log(JSON.stringify({ ree: pkg.version, ...r, agents }, null, 2));
       return;
     }
     console.log(bold(`\nREE ${pkg.version} doctor`));
@@ -283,6 +292,15 @@ program
     console.log(bold("\nModel provider (reconstruction only)"));
     if (r.provider.error) console.log(`${red("✗")} ${r.provider.error}`);
     else console.log(`${r.provider.kind === "none" ? yellow("!") : green("✓")} ${r.provider.note}`);
+    console.log(bold("\nAI agents"));
+    if (!agents.length) console.log(`${dim("•")} none detected — for any MCP client: ree setup --print`);
+    for (const a of agents) {
+      if (a.connected) console.log(`${green("✓")} ${a.label}: REE connected`);
+      else if (a.status === "unknown") console.log(`${yellow("!")} ${a.label}: couldn't read its settings to check — run ree setup`);
+      else if (a.status === "update") console.log(`${yellow("!")} ${a.label}: REE registered with a different path — run ree setup`);
+      else if (a.status === "error") console.log(`${red("✗")} ${a.label}: its config can't be read — run ree setup for details`);
+      else console.log(`${yellow("!")} ${a.label}: REE not connected — run ree setup`);
+    }
     console.log(bold("\nAlways available (no tools needed)"));
     for (const f of SUPPORTED_SUMMARY.filter((x) => !/\.dmg/.test(x))) console.log(`${green("✓")} ${f}`);
   });
@@ -342,6 +360,147 @@ async function runApp(target: string, opts: { budget?: string; maxArtifacts?: st
     }
     console.log(dim(`\nRun 'ree analyze <inner-path>' for a full report on any one artifact.`));
   }
+
+program
+  .command("setup")
+  .description("connect REE to your AI agents (Claude Code, Claude Desktop, VS Code, Cursor) — shows the changes first")
+  .option("-y, --yes", "apply without asking")
+  .option("--dry-run", "only show what would change")
+  .option("--remove", "remove REE from your agents instead")
+  .option("--print", "print copy-paste configuration for any MCP client, change nothing")
+  .option("--client <ids>", "only these: claude-code, claude-desktop, vscode, cursor (comma-separated)")
+  .option("--npx", "register 'npx ree-reverse-engineer-everything mcp' instead of this installation")
+  .option("--json", "machine-readable plan and results")
+  .action(async (opts: { yes?: boolean; dryRun?: boolean; remove?: boolean; print?: boolean; client?: string; npx?: boolean; json?: boolean }) => {
+    const { spawnSync } = await import("node:child_process");
+    const { which } = await import("../tools/external.js");
+    const { defaultSetupEnv } = await import("../setup/clients.js");
+    const { applyPlan, claudeInvocation, launchCommand, planSetup, printableConfig } = await import("../setup/setup.js");
+    const launch = launchCommand({ npx: opts.npx, nodeOnPath: which("node") });
+    if (opts.print) {
+      console.log(printableConfig(launch));
+      return;
+    }
+    const ids = ["claude-code", "claude-desktop", "vscode", "cursor"] as const;
+    const clients = opts.client?.split(",").map((s) => s.trim()).filter(Boolean);
+    const bad = clients?.filter((c) => !(ids as readonly string[]).includes(c));
+    if (bad?.length) {
+      console.error(`ree: unknown client ${bad.map((b) => `'${b}'`).join(", ")} (use: ${ids.join(", ")})`);
+      process.exitCode = 2;
+      return;
+    }
+    const deps = {
+      env: defaultSetupEnv(process.env, (b) => which(b) !== null),
+      runClaude: (args: string[]) => {
+        // Never through a shell with raw arguments: paths with spaces must survive intact.
+        const inv = claudeInvocation(which("claude") ?? "claude", args);
+        const r = spawnSync(inv.file, inv.args, { encoding: "utf8", timeout: 30_000, windowsVerbatimArguments: inv.verbatim });
+        return { status: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr || (r.error?.message ?? "") };
+      },
+      skillSource: fileURLToPath(new URL("../../skills/ree/SKILL.md", import.meta.url)),
+    };
+    const plan = planSetup(deps, launch, { clients: clients as (typeof ids)[number][] | undefined, remove: opts.remove });
+    const pending = plan.filter((p) => ["add", "update", "remove"].includes(p.action));
+    if (opts.json && (opts.dryRun || !pending.length || !opts.yes)) {
+      console.log(JSON.stringify({ launch, plan }, null, 2));
+      return;
+    }
+    if (!opts.json) {
+      console.log(bold(opts.remove ? "\nREE setup — remove REE from your AI agents\n" : "\nREE setup — connect REE to your AI agents\n"));
+      const mark: Record<string, string> = {
+        add: green("+ add"),
+        update: yellow("~ update"),
+        remove: red("- remove"),
+        ok: dim("✓ already set"),
+        absent: dim("· not present"),
+        skip: dim("· skipped"),
+        error: red("✗ can't change"),
+      };
+      for (const p of plan) {
+        console.log(`  ${(mark[p.action] ?? p.action).padEnd(24)} ${bold(p.label)} ${dim(p.kind === "skill" ? "skill" : "MCP server")}${p.verified ? "" : yellow(" (format not re-verified)")}`);
+        if (p.action !== "skip" && p.action !== "absent") console.log(dim(`      ${p.target}`));
+        if (p.detail) console.log(dim(`      ${p.detail}`));
+      }
+      if (!opts.remove) console.log(dim(`\n  Agents will start REE with: ${[launch.command, ...launch.args].join(" ")}`));
+    }
+    if (!pending.length) {
+      console.log(opts.remove ? "\nNothing to remove." : "\nNothing to change. For other MCP clients: ree setup --print");
+      return;
+    }
+    if (opts.dryRun) {
+      console.log(dim("\nDry run — nothing was changed."));
+      return;
+    }
+    if (!opts.yes) {
+      if (!process.stdin.isTTY || !process.stdout.isTTY) {
+        console.log("\nNot in an interactive terminal: nothing was changed. Re-run with --yes to apply.");
+        return;
+      }
+      const { createInterface } = await import("node:readline/promises");
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const answer = (await rl.question(`\nApply ${pending.length} change(s)? Existing files are backed up first. [y/N] `)).trim().toLowerCase();
+      rl.close();
+      if (answer !== "y" && answer !== "yes") {
+        console.log("Nothing was changed.");
+        return;
+      }
+    }
+    const results = applyPlan(deps, launch, plan);
+    if (opts.json) {
+      console.log(JSON.stringify({ launch, plan, results }, null, 2));
+    } else {
+      console.log();
+      for (const r of results) {
+        console.log(`  ${r.ok ? green("✓") : red("✗")} ${r.item.label}: ${r.message}`);
+        if (r.backup) console.log(dim(`      backup: ${r.backup}`));
+      }
+      const hints = [...new Set(results.filter((r) => r.ok).map((r) => r.item.restartHint))];
+      if (hints.length) console.log(`\n${hints.join(" ")}${opts.remove ? "" : ` Then ask your agent: "Use REE to show me the parts of <path to an app>."`}`);
+      if (!opts.remove && launch.command !== "npx") console.log(dim("If you move or delete this copy of REE, run 'ree setup' again."));
+    }
+    if (results.some((r) => !r.ok)) process.exitCode = 1;
+  });
+
+program
+  .command("update")
+  .description("check npm for a newer REE and show (or run) the right update command")
+  .option("--check", "only check, never install")
+  .option("-y, --yes", "install without asking (global npm installs)")
+  .action(async (opts: { check?: boolean; yes?: boolean }) => {
+    const { installKind, latestVersion, compareVersions, updateAdvice } = await import("../setup/update.js");
+    const current = (createRequire(import.meta.url)("../../package.json") as { version: string }).version;
+    const r = await latestVersion();
+    if (!r.latest) {
+      console.log(`REE ${current}. Can't check for updates: ${r.error}.`);
+      return;
+    }
+    if (compareVersions(r.latest, current) <= 0) {
+      console.log(`${green("✓")} REE ${current} is up to date${compareVersions(r.latest, current) < 0 ? ` (newer than npm's ${r.latest})` : ""}.`);
+      return;
+    }
+    const kind = installKind(fileURLToPath(import.meta.url));
+    const advice = updateAdvice(kind, r.latest);
+    console.log(`REE ${r.latest} is available (you have ${current}).`);
+    if (!advice.run || opts.check) {
+      console.log(`  ${advice.message}`);
+      return;
+    }
+    if (!opts.yes) {
+      if (!process.stdin.isTTY) {
+        console.log(`  Run: ${advice.message}  (or 'ree update --yes')`);
+        return;
+      }
+      const { createInterface } = await import("node:readline/promises");
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const a = (await rl.question(`Run '${advice.message}' now? [y/N] `)).trim().toLowerCase();
+      rl.close();
+      if (a !== "y" && a !== "yes") return;
+    }
+    const { spawnSync } = await import("node:child_process");
+    const res = spawnSync(advice.run[0]!, advice.run.slice(1), { stdio: "inherit", shell: process.platform === "win32" });
+    if (res.status === 0) console.log(`${green("✓")} Updated. Run 'ree setup' if your agents should use the new version.`);
+    else process.exitCode = res.status ?? 1;
+  });
 
 const ANALYZE_DEFAULTS = { findings: "25", prune: true, budget: "60000", maxUnits: "10", verify: true };
 

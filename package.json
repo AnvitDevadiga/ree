@@ -1,7 +1,7 @@
 {
   "name": "ree-reverse-engineer-everything",
   "version": "2.0.0",
-  "description": "REE — understand how software works. Static, decoy-resistant analysis of apps and binaries (Electron, JS, WASM, Android, Java, .NET, native, Python, iOS) that gives AI models a clean, honest view of the code. CLI + MCP server.",
+  "description": "REE \u2014 understand how software works. Static, decoy-resistant analysis of apps and binaries (Electron, JS, WASM, Android, Java, .NET, native, Python, iOS) that gives AI models a clean, honest view of the code. CLI + MCP server.",
   "type": "module",
   "bin": {
     "ree": "./dist/cli/index.js"
@@ -39,6 +39,7 @@
   "files": [
     "dist",
     "samples",
+    "skills",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
